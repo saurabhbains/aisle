@@ -12,10 +12,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Generating emails for ${venues.length} venues...`);
+    // Filter out venues without email addresses
+    const venuesWithEmails = venues.filter((v: any) => v.venue.email && v.venue.email.trim() !== '');
+    const venuesWithoutEmails = venues.filter((v: any) => !v.venue.email || v.venue.email.trim() === '');
+
+    if (venuesWithoutEmails.length > 0) {
+      console.log(`⚠️ Skipping ${venuesWithoutEmails.length} venues without email addresses:`,
+        venuesWithoutEmails.map((v: any) => v.venue.name));
+    }
+
+    console.log(`Generating emails for ${venuesWithEmails.length} venues...`);
 
     // Generate emails for each venue in parallel
-    const emailPromises = venues.map(async (venueData: any) => {
+    const emailPromises = venuesWithEmails.map(async (venueData: any) => {
       try {
         const email = await generatePersonalizedEmail(
           venueData.venue.name,
@@ -51,10 +60,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      total: venues.length,
+      total: venuesWithEmails.length,
       successful: successful.length,
       failed: failed.length,
-      emails: results
+      emails: results,
+      skippedVenues: venuesWithoutEmails.length
     });
   } catch (error: any) {
     console.error('Batch email generation error:', error);
