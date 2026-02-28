@@ -19,7 +19,7 @@ export default function Home() {
 
           <div className="flex gap-4 justify-center">
             <Link
-              href="/dashboard"
+              href="/onboarding"
               className="inline-block bg-pink-600 hover:bg-pink-700 text-white font-bold text-xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-lg"
             >
               Get Started 🚀
@@ -130,7 +130,7 @@ export default function Home() {
             Join couples who are saving 20+ hours on venue research
           </p>
           <Link
-            href="/dashboard"
+            href="/onboarding"
             className="inline-block bg-white text-pink-600 hover:bg-gray-100 font-bold text-xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-lg"
           >
             Get Started Free →
