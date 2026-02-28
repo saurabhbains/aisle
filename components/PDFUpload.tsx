@@ -18,10 +18,17 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
       return;
     }
 
-    console.log('File selected:', file.name, file.type);
+    console.log('File selected:', file.name, file.type, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
 
     if (file.type !== 'application/pdf') {
       alert('Please upload a PDF file');
+      return;
+    }
+
+    // Check file size (4.5MB limit for Vercel serverless functions)
+    const maxSize = 4.5 * 1024 * 1024; // 4.5MB in bytes
+    if (file.size > maxSize) {
+      alert(`PDF file is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Please use a file smaller than 4.5MB.`);
       return;
     }
 
@@ -36,6 +43,17 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
         method: 'POST',
         body: formData,
       });
+
+      if (!response.ok) {
+        if (response.status === 413) {
+          alert('PDF file is too large. Please use a smaller file (under 4.5MB).');
+        } else {
+          const errorText = await response.text();
+          console.error('API Error:', errorText);
+          alert('Failed to upload PDF. Error: ' + response.status);
+        }
+        return;
+      }
 
       const data = await response.json();
 
@@ -85,6 +103,7 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
               <div>
                 <p className="text-lg font-semibold text-gray-700">Click to upload PDF</p>
                 <p className="text-sm text-gray-500 mt-1">or drag and drop</p>
+                <p className="text-xs text-gray-400 mt-2">Maximum file size: 4.5MB</p>
               </div>
               {fileName && (
                 <p className="text-sm text-gray-600 mt-2">
