@@ -78,8 +78,18 @@ export async function POST(request: NextRequest) {
         if (attachment.content_type?.includes('pdf')) {
           console.log(`Processing PDF attachment: ${attachment.filename}`);
 
-          // Download the PDF using the attachment URL
-          const pdfData = await downloadAttachment(attachment.download_url);
+          let pdfData;
+
+          // Check if this is a test email with base64 content or production email with download URL
+          if (attachment.content) {
+            // Test mode: PDF content is base64 encoded in the attachment
+            console.log('Using base64 PDF content from test payload');
+            pdfData = Buffer.from(attachment.content, 'base64').buffer;
+          } else if (attachment.download_url) {
+            // Production mode: Download the PDF using the attachment URL
+            console.log('Downloading PDF from Resend');
+            pdfData = await downloadAttachment(attachment.download_url);
+          }
 
           if (pdfData) {
             // Parse the PDF and extract venue information

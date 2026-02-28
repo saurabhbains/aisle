@@ -28,14 +28,37 @@ Events Manager
 Cliveden House
 Phone: +44 1628 668561`);
 
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      setPdfFile(file);
+    } else {
+      alert('Please select a PDF file');
+    }
+  };
 
   const handleTest = async () => {
     setLoading(true);
     setResult(null);
 
     try {
+      // If PDF is attached, convert to base64 first
+      let pdfBase64 = null;
+      if (pdfFile) {
+        const reader = new FileReader();
+        pdfBase64 = await new Promise<string>((resolve) => {
+          reader.onload = () => {
+            const base64 = (reader.result as string).split(',')[1];
+            resolve(base64);
+          };
+          reader.readAsDataURL(pdfFile);
+        });
+      }
+
       // Create a mock Resend webhook payload
       const mockPayload = {
         type: 'email.received',
@@ -47,6 +70,14 @@ Phone: +44 1628 668561`);
           subject: 'Re: Wedding Venue Inquiry',
           text: emailBody,
           html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>`,
+          attachments: pdfFile ? [
+            {
+              filename: pdfFile.name,
+              content_type: 'application/pdf',
+              size: pdfFile.size,
+              content: pdfBase64,
+            }
+          ] : []
         }
       };
 
@@ -106,6 +137,26 @@ Phone: +44 1628 668561`);
             </p>
           </div>
 
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              PDF Attachment (Optional)
+            </label>
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={handleFileChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+            {pdfFile && (
+              <p className="text-sm text-green-600 mt-2">
+                ✓ {pdfFile.name} ({Math.round(pdfFile.size / 1024)} KB)
+              </p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              Upload a PDF brochure to test attachment parsing
+            </p>
+          </div>
+
           <button
             onClick={handleTest}
             disabled={loading}
@@ -130,7 +181,7 @@ Phone: +44 1628 668561`);
                   ✓ Venue {result.venueId} has been updated to 'responded' status
                 </p>
                 <p className="text-green-700 text-sm mt-1">
-                  Check the <a href="/dashboard" className="underline">dashboard</a> to see the updated venue
+                  Check the <a href="/venues" className="underline">venues page</a> to see the updated venue
                 </p>
               </div>
             )}
