@@ -24,10 +24,12 @@ export default function VenuesPage() {
   const [selectedVenues, setSelectedVenues] = useState<Set<string>>(new Set());
 
   const handleSearch = async () => {
+    console.log('Search button clicked!');
     setLoading(true);
     setError('');
 
     try {
+      console.log('Sending request with criteria:', criteria);
       // Convert form values to proper types
       const searchCriteria = {
         hardCriteria: {
@@ -51,8 +53,10 @@ export default function VenuesPage() {
       });
 
       const data = await response.json();
+      console.log('API Response:', data);
 
       if (data.success) {
+        console.log(`Found ${data.results.length} venues`);
         setMatchedVenues(data.results);
       } else {
         setError(data.error || 'Failed to match venues');
