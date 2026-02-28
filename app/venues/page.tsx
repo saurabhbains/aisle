@@ -152,6 +152,8 @@ export default function VenuesPage() {
         setShowEmailReview(false);
         setGeneratedEmails([]);
         setSelectedVenues(new Set());
+        // Refresh the search to show updated statuses
+        handleSearch();
       } else {
         alert('Failed to send emails: ' + data.error);
       }
@@ -160,6 +162,29 @@ export default function VenuesPage() {
       alert('Failed to send emails');
     } finally {
       setSendingEmails(false);
+    }
+  };
+
+  const handleSimulateResponse = async (venueId: string) => {
+    try {
+      const response = await fetch('/api/simulate-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ venueId })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`Simulated response from venue! They've sent back their brochure with pricing and availability.`);
+        // Refresh the search to show updated status
+        handleSearch();
+      } else {
+        alert('Failed to simulate response: ' + data.error);
+      }
+    } catch (error: any) {
+      console.error('Simulate response error:', error);
+      alert('Failed to simulate response');
     }
   };
 
@@ -366,6 +391,12 @@ export default function VenuesPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Highlights
                     </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -449,6 +480,40 @@ export default function VenuesPage() {
                             </span>
                           ))}
                         </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {match.venue.status === 'not_contacted' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                            Not Contacted
+                          </span>
+                        )}
+                        {match.venue.status === 'contacted' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            ⏳ Awaiting Response
+                          </span>
+                        )}
+                        {match.venue.status === 'responded' && (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            ✓ Responded
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {match.venue.status === 'contacted' && (
+                          <button
+                            onClick={() => handleSimulateResponse(match.venue.id)}
+                            className="text-purple-600 hover:text-purple-900 font-medium"
+                          >
+                            Simulate Response
+                          </button>
+                        )}
+                        {match.venue.status === 'responded' && (
+                          <button
+                            className="text-green-600 hover:text-green-900 font-medium"
+                          >
+                            View Details
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

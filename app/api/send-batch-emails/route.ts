@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendVenueEmail } from '@/lib/email';
+import { updateVenueStatus } from '@/lib/venue-database';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +47,9 @@ export async function POST(request: NextRequest) {
           email.emailBody,
           from || process.env.EMAIL_FROM
         );
+
+        // Update venue status to 'contacted'
+        updateVenueStatus(email.venueId, 'contacted');
 
         results.push({
           venueId: email.venueId,

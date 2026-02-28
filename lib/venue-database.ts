@@ -29,6 +29,7 @@ export const MOCK_VENUES: Venue[] = [
   {
     id: '1',
     name: 'Cliveden House',
+    email: 'weddings@clivedenhouse.co.uk',
     location: 'Taplow, Berkshire',
     city: 'Berkshire',
     capacity: 120,
@@ -863,4 +864,20 @@ export function getAllVenues(): Venue[] {
 
 export function getVenueById(id: string): Venue | undefined {
   return MOCK_VENUES.find(v => v.id === id);
+}
+
+export function updateVenueStatus(
+  id: string,
+  status: Venue['status'],
+  responseData?: any
+): Venue | undefined {
+  const venue = MOCK_VENUES.find(v => v.id === id);
+  if (venue) {
+    venue.status = status;
+    venue.lastUpdated = new Date();
+    if (responseData) {
+      venue.responseData = responseData;
+    }
+  }
+  return venue;
 }
