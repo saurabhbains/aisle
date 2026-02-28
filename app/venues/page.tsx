@@ -24,7 +24,6 @@ export default function VenuesPage() {
   const [selectedVenues, setSelectedVenues] = useState<Set<string>>(new Set());
 
   const handleSearch = async () => {
-    alert('Search button clicked!');
     console.log('Search button clicked!');
     setLoading(true);
     setError('');
@@ -57,8 +56,11 @@ export default function VenuesPage() {
       console.log('API Response:', data);
 
       if (data.success) {
-        console.log(`Found ${data.results.length} venues`);
+        console.log(`Found ${data.results.length} matching venues out of ${data.totalVenues} total`);
         setMatchedVenues(data.results);
+        if (data.results.length === 0) {
+          setError(`No venues found matching your criteria. Searched ${data.totalVenues} venues.`);
+        }
       } else {
         setError(data.error || 'Failed to match venues');
       }
@@ -381,7 +383,23 @@ export default function VenuesPage() {
           </div>
         )}
 
-        {matchedVenues.length === 0 && !loading && !error && (
+        {!loading && matchedVenues.length === 0 && criteria.hardCriteria.guestCount && (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="text-5xl mb-4">😔</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Venues Found</h3>
+            <p className="text-gray-600 mb-4">
+              We couldn't find any venues matching your criteria. Try adjusting your requirements:
+            </p>
+            <ul className="text-left max-w-md mx-auto text-gray-600 space-y-2">
+              <li>• Increase your budget</li>
+              <li>• Reduce minimum guest count</li>
+              <li>• Expand location search area</li>
+              <li>• Remove specific catering requirements</li>
+            </ul>
+          </div>
+        )}
+
+        {matchedVenues.length === 0 && !loading && !error && !criteria.hardCriteria.guestCount && (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <p className="text-gray-500">Enter your criteria above and click "Search Venues" to see matching venues</p>
           </div>
