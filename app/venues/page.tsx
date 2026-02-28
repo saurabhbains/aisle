@@ -73,8 +73,14 @@ export default function VenuesPage() {
         body: JSON.stringify({
           venues: selectedVenuesList.map(v => ({
             venue: {
-              ...v,
-              email: v.contact?.email || ''
+              id: v.id,
+              name: v.name,
+              email: v.contact?.email || '',
+              location: v.location,
+              capacity: v.capacity,
+              priceRange: v.priceRange,
+              features: v.features,
+              type: v.type
             }
           })),
           criteria: state.criteria,
