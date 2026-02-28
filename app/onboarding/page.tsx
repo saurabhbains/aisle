@@ -52,8 +52,12 @@ export default function OnboardingPage() {
   const handleComplete = () => {
     if (selectedMode) {
       dispatch({ type: 'SET_INPUT_MODE', payload: selectedMode });
-      dispatch({ type: 'SET_STEP', payload: 'criteria' });
-      router.push('/criteria');
+      if (selectedMode === 'voice') {
+        router.push('/voice-input');
+      } else {
+        dispatch({ type: 'SET_STEP', payload: 'criteria' });
+        router.push('/criteria');
+      }
     }
   };
 
