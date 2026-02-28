@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^5.2.2",
     "ai": "^6.0.105",
     "next": "16.1.6",
+    "openai": "^6.25.0",
     "pdf-parse": "^2.4.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
