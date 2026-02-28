@@ -4,7 +4,7 @@ import { matchVenuesToCriteria, Criteria } from '@/lib/venue-matcher';
 
 export async function POST(request: NextRequest) {
   try {
-    const { criteria } = await request.json();
+    const { criteria, venues } = await request.json();
 
     if (!criteria) {
       return NextResponse.json(
@@ -13,8 +13,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get all venues
-    const allVenues = getAllVenues();
+    // Use provided venues (from web scraping) or fall back to mock database for demo
+    const allVenues = venues && venues.length > 0 ? venues : getAllVenues();
+    console.log(`Matching ${allVenues.length} venues to criteria`);
 
     // Match venues to criteria
     const matchedVenues = matchVenuesToCriteria(allVenues, criteria as Criteria);

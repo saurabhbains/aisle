@@ -37,7 +37,7 @@ export default function VenuesPage() {
     setHasSearched(true);
 
     try {
-      console.log('Sending request with criteria:', criteria);
+      console.log('Scraping venues with criteria:', criteria);
       // Convert form values to proper types
       const searchCriteria = {
         hardCriteria: {
@@ -54,21 +54,40 @@ export default function VenuesPage() {
         },
       };
 
-      const response = await fetch('/api/match-venues', {
+      // First, scrape venues from the web
+      const scrapeResponse = await fetch('/api/scrape-venues', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ criteria: searchCriteria }),
       });
 
-      const data = await response.json();
-      console.log('API Response:', data);
+      const scrapeData = await scrapeResponse.json();
+      console.log('Scrape Response:', scrapeData);
 
-      if (data.success) {
-        console.log(`Found ${data.results.length} matching venues out of ${data.totalVenues} total`);
-        setMatchedVenues(data.results);
-        // Don't set error for 0 results, just show the no results UI
+      if (!scrapeData.success) {
+        setError(scrapeData.error || 'Failed to scrape venues');
+        setLoading(false);
+        return;
+      }
+
+      // Then, match and rank the scraped venues
+      const matchResponse = await fetch('/api/match-venues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          criteria: searchCriteria,
+          venues: scrapeData.venues
+        }),
+      });
+
+      const matchData = await matchResponse.json();
+      console.log('Match Response:', matchData);
+
+      if (matchData.success) {
+        console.log(`Found ${matchData.results.length} matching venues`);
+        setMatchedVenues(matchData.results);
       } else {
-        setError(data.error || 'Failed to match venues');
+        setError(matchData.error || 'Failed to match venues');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to search venues');
@@ -318,7 +337,7 @@ export default function VenuesPage() {
                 disabled={loading}
                 className="px-6 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
               >
-                {loading ? 'Searching...' : 'Search Venues'}
+                {loading ? 'Scraping web for venues...' : 'Search Venues'}
               </button>
               {matchedVenues.length > 0 && (
                 <div className="flex gap-2">
