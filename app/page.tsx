@@ -17,12 +17,20 @@ export default function Home() {
             Find your perfect venue in <span className="font-bold text-pink-600">hours, not months</span>.
           </p>
 
-          <Link
-            href="/dashboard"
-            className="inline-block bg-pink-600 hover:bg-pink-700 text-white font-bold text-xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-lg"
-          >
-            Start Planning 🚀
-          </Link>
+          <div className="flex gap-4 justify-center">
+            <Link
+              href="/venues"
+              className="inline-block bg-pink-600 hover:bg-pink-700 text-white font-bold text-xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-lg"
+            >
+              Search Venues 🔍
+            </Link>
+            <Link
+              href="/dashboard"
+              className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold text-xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-lg"
+            >
+              Voice Assistant 🎤
+            </Link>
+          </div>
         </div>
 
         {/* Problem Section */}
