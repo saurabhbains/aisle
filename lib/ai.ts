@@ -46,17 +46,30 @@ export async function extractCriteriaFromVoice(transcription: string) {
     messages: [
       {
         role: "system",
-        content: `You are a wedding planning assistant. Extract wedding criteria from spoken input and structure it as JSON:
-- date: string (wedding date or month/season)
-- location: string (city/area)
-- guestCount: number
-- budget: number (in pounds)
-- needsAccommodation: boolean
-- needsOutdoorSpace: boolean
-- cateringPreference: string (halal, vegetarian, external, etc.)
-- otherRequirements: string[] (any other specific needs)
+        content: `You are a wedding planning assistant. Extract wedding criteria from spoken input and categorize them as HARD (must-have) or SOFT (nice-to-have).
 
-Extract what's mentioned and use null for missing information.`
+Return JSON with this structure:
+{
+  "hardCriteria": {
+    "date": "string (wedding date or month/season)",
+    "location": "string (city/area - HARD if specific city mentioned)",
+    "guestCount": "number (HARD if specific number)",
+    "budget": "number (HARD if it's a strict limit)",
+    "needsAccommodation": "boolean (HARD if explicitly required)",
+    "cateringPreference": "string (HARD if religious/dietary requirement like halal, kosher)"
+  },
+  "softCriteria": {
+    "needsOutdoorSpace": "boolean (SOFT - preference)",
+    "aestheticPreference": "string (modern, rustic, traditional, etc.)",
+    "preferredAmenities": "string[] (bar, parking, dance floor, etc.)",
+    "otherPreferences": "string[] (any other nice-to-have features)"
+  }
+}
+
+HARD criteria are deal-breakers (venue must meet these).
+SOFT criteria are preferences (venue is better if it has these).
+
+Use null for missing information.`
       },
       {
         role: "user",
