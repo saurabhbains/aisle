@@ -67,22 +67,28 @@ export default function VenuesPage() {
     try {
       // Step 1: Generate emails
       console.log('Generating emails for selected venues...');
+      console.log('Selected venues:', selectedVenuesList);
+
+      const venuesPayload = selectedVenuesList.map(v => ({
+        venue: {
+          id: v.id,
+          name: v.name,
+          email: v.contact?.email || '',
+          location: v.location,
+          capacity: v.capacity,
+          priceRange: v.priceRange,
+          features: v.features,
+          type: v.type
+        }
+      }));
+
+      console.log('Venues payload:', venuesPayload);
+
       const generateResponse = await fetch('/api/generate-batch-emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          venues: selectedVenuesList.map(v => ({
-            venue: {
-              id: v.id,
-              name: v.name,
-              email: v.contact?.email || '',
-              location: v.location,
-              capacity: v.capacity,
-              priceRange: v.priceRange,
-              features: v.features,
-              type: v.type
-            }
-          })),
+          venues: venuesPayload,
           criteria: state.criteria,
           coupleName: 'Wedding Couple'
         })
@@ -90,9 +96,14 @@ export default function VenuesPage() {
 
       const generateData = await generateResponse.json();
       console.log('Email generation result:', generateData);
+      console.log('Generated emails:', generateData.emails);
 
       if (!generateData.success) {
         throw new Error(generateData.error || 'Failed to generate emails');
+      }
+
+      if (!generateData.emails || generateData.emails.length === 0) {
+        throw new Error('No emails were generated. Check that venues have email addresses.');
       }
 
       // Step 2: Send emails (in demo mode, sends to saurabhbains@berkeley.edu)
