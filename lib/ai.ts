@@ -80,15 +80,17 @@ export async function generatePersonalizedEmail(
         content: `You are a wedding planning assistant writing a professional, warm, and personalized email to a wedding venue.
 
 The email should:
-1. Introduce the couple briefly
-2. Express interest in the venue
-3. Reference specific details from the brochure that match their needs
-4. Ask about availability for their date
-5. Ask any clarifying questions based on their criteria
-6. Be warm but professional
-7. Be concise (2-3 short paragraphs)
+1. Start with "Dear [Venue Name] Team,"
+2. Introduce the couple briefly
+3. Express interest in the venue
+4. Reference specific details from the brochure that match their needs
+5. Ask about availability for their date
+6. Ask any clarifying questions based on their criteria
+7. Be warm but professional
+8. Be concise (2-3 short paragraphs)
+9. Sign off with "Best regards," and the couple's name
 
-Sign off with "Best regards" and leave space for the couple's name.`
+IMPORTANT: DO NOT include a subject line in the email body. Start directly with the greeting.`
       },
       {
         role: "user",
