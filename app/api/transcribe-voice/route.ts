@@ -14,6 +14,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check for API key
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is not set');
+      return NextResponse.json(
+        { error: 'Server configuration error: Missing API key' },
+        { status: 500 }
+      );
+    }
+
     // Create OpenAI client at runtime
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
