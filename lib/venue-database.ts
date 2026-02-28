@@ -2,6 +2,7 @@
 export interface Venue {
   id: string;
   name: string;
+  email?: string;
   location: string;
   city: string;
   capacity: number;

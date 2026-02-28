@@ -23,6 +23,10 @@ export default function VenuesPage() {
     },
   });
   const [selectedVenues, setSelectedVenues] = useState<Set<string>>(new Set());
+  const [generatedEmails, setGeneratedEmails] = useState<any[]>([]);
+  const [showEmailReview, setShowEmailReview] = useState(false);
+  const [generatingEmails, setGeneratingEmails] = useState(false);
+  const [sendingEmails, setSendingEmails] = useState(false);
 
   const handleSearch = async () => {
     console.log('Search button clicked!');
@@ -87,6 +91,76 @@ export default function VenuesPage() {
 
   const deselectAll = () => {
     setSelectedVenues(new Set());
+  };
+
+  const handleGenerateEmails = async () => {
+    setGeneratingEmails(true);
+
+    try {
+      // Get the selected venue data
+      const selectedVenueData = matchedVenues.filter(m =>
+        selectedVenues.has(m.venue.id)
+      );
+
+      console.log(`Generating emails for ${selectedVenueData.length} venues...`);
+
+      const response = await fetch('/api/generate-batch-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          venues: selectedVenueData,
+          criteria: criteria,
+          coupleName: 'Sarah & John' // TODO: Get from user input
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log(`Successfully generated ${data.successful} emails`);
+        setGeneratedEmails(data.emails);
+        setShowEmailReview(true);
+      } else {
+        alert('Failed to generate emails: ' + data.error);
+      }
+    } catch (error: any) {
+      console.error('Email generation error:', error);
+      alert('Failed to generate emails');
+    } finally {
+      setGeneratingEmails(false);
+    }
+  };
+
+  const handleSendBatchEmails = async () => {
+    setSendingEmails(true);
+
+    try {
+      console.log(`Sending ${generatedEmails.filter(e => e.success).length} emails...`);
+
+      const response = await fetch('/api/send-batch-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emails: generatedEmails
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`Successfully sent ${data.sent} emails! ${data.failed > 0 ? `(${data.failed} failed)` : ''}`);
+        setShowEmailReview(false);
+        setGeneratedEmails([]);
+        setSelectedVenues(new Set());
+      } else {
+        alert('Failed to send emails: ' + data.error);
+      }
+    } catch (error: any) {
+      console.error('Email sending error:', error);
+      alert('Failed to send emails');
+    } finally {
+      setSendingEmails(false);
+    }
   };
 
   return (
@@ -234,10 +308,11 @@ export default function VenuesPage() {
                     Deselect All
                   </button>
                   <button
-                    disabled={selectedVenues.size === 0}
+                    onClick={handleGenerateEmails}
+                    disabled={selectedVenues.size === 0 || generatingEmails}
                     className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
                   >
-                    Send Emails ({selectedVenues.size})
+                    {generatingEmails ? 'Generating...' : `Generate Emails (${selectedVenues.size})`}
                   </button>
                 </div>
               )}
@@ -402,6 +477,76 @@ export default function VenuesPage() {
         {!hasSearched && (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <p className="text-gray-500">Enter your criteria above and click "Search Venues" to see matching venues</p>
+          </div>
+        )}
+
+        {/* Email Review Modal */}
+        {showEmailReview && generatedEmails.length > 0 && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <h2 className="text-2xl font-bold text-gray-900">Review Emails</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Review and edit emails before sending to {generatedEmails.filter(e => e.success).length} venues
+                </p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+                {generatedEmails.map((email, index) => (
+                  <div key={email.venueId} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-lg text-gray-900">{email.venueName}</h3>
+                        {email.venueEmail && (
+                          <p className="text-sm text-gray-600">To: {email.venueEmail}</p>
+                        )}
+                      </div>
+                      {email.success ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                          ✓ Generated
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                          ✗ Failed
+                        </span>
+                      )}
+                    </div>
+
+                    {email.success ? (
+                      <textarea
+                        value={email.emailBody}
+                        onChange={(e) => {
+                          const updated = [...generatedEmails];
+                          updated[index].emailBody = e.target.value;
+                          setGeneratedEmails(updated);
+                        }}
+                        className="w-full h-64 px-3 py-2 border border-gray-300 rounded-md focus:ring-pink-500 focus:border-pink-500 font-mono text-sm"
+                      />
+                    ) : (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                        Error: {email.error}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
+                <button
+                  onClick={() => setShowEmailReview(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendBatchEmails}
+                  disabled={sendingEmails}
+                  className="px-6 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                >
+                  {sendingEmails ? 'Sending...' : `Send All Emails (${generatedEmails.filter(e => e.success).length})`}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
