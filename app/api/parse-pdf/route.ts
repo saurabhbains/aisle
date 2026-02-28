@@ -13,23 +13,21 @@ export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('pdf') as File;
+    const body = await request.json();
+    const { pdfUrl, fileName } = body;
 
-    if (!file) {
+    if (!pdfUrl || !fileName) {
       return NextResponse.json(
-        { error: 'No PDF file provided' },
+        { error: 'Missing pdfUrl or fileName' },
         { status: 400 }
       );
     }
 
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    console.log('Processing PDF from blob:', fileName);
 
     // For hackathon demo: Use realistic mock data
-    // In production, this would use GPT-4 Vision to read the PDF
-    const venueInfo = getMockVenueData(file.name);
+    // In production, this would fetch the PDF from blob URL and use GPT-4 Vision to read it
+    const venueInfo = getMockVenueData(fileName);
 
     // Simulate processing time for realism
     await new Promise(resolve => setTimeout(resolve, 1500));

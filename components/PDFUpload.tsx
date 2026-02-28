@@ -27,10 +27,10 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
       return;
     }
 
-    // Check file size (40MB limit)
-    const maxSize = 40 * 1024 * 1024; // 40MB in bytes
+    // Check file size (100MB limit with Blob storage)
+    const maxSize = 100 * 1024 * 1024; // 100MB in bytes
     if (file.size > maxSize) {
-      alert(`PDF file is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Please use a file smaller than 40MB.`);
+      alert(`PDF file is too large (${(file.size / 1024 / 1024).toFixed(2)}MB). Please use a file smaller than 100MB.`);
       return;
     }
 
@@ -38,22 +38,34 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
     setIsUploading(true);
 
     try {
-      const formData = new FormData();
-      formData.append('pdf', file);
+      // Upload to Vercel Blob (bypasses body size limit)
+      console.log('Uploading to Blob storage...');
+      const uploadResponse = await fetch(
+        `/api/upload-pdf?filename=${encodeURIComponent(file.name)}`,
+        {
+          method: 'POST',
+          body: file,
+        }
+      );
 
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      const { url } = await uploadResponse.json();
+      console.log('File uploaded to:', url);
+
+      // Now process the PDF from the blob URL
       const response = await fetch('/api/parse-pdf', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pdfUrl: url, fileName: file.name }),
       });
 
       if (!response.ok) {
-        if (response.status === 413) {
-          alert('PDF file is too large. Please use a smaller file (under 40MB).');
-        } else {
-          const errorText = await response.text();
-          console.error('API Error:', errorText);
-          alert('Failed to upload PDF. Error: ' + response.status);
-        }
+        const errorText = await response.text();
+        console.error('API Error:', errorText);
+        alert('Failed to process PDF. Error: ' + response.status);
         return;
       }
 
@@ -139,7 +151,7 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
               <div>
                 <p className="text-lg font-semibold text-gray-700">Click to upload PDF</p>
                 <p className="text-sm text-gray-500 mt-1">or drag and drop</p>
-                <p className="text-xs text-gray-400 mt-2">Maximum file size: 40MB</p>
+                <p className="text-xs text-gray-400 mt-2">Maximum file size: 100MB</p>
               </div>
               {fileName && (
                 <p className="text-sm text-gray-600 mt-2">

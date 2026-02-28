@@ -12,6 +12,7 @@
     "@ai-sdk/anthropic": "^3.0.50",
     "@ai-sdk/openai": "^3.0.37",
     "@hookform/resolvers": "^5.2.2",
+    "@vercel/blob": "^2.3.0",
     "ai": "^6.0.105",
     "next": "16.1.6",
     "openai": "^6.25.0",
