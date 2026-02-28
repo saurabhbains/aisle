@@ -19,16 +19,10 @@ export default function Home() {
 
           <div className="flex gap-4 justify-center">
             <Link
-              href="/venues"
+              href="/dashboard"
               className="inline-block bg-pink-600 hover:bg-pink-700 text-white font-bold text-xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-lg"
             >
-              Search Venues 🔍
-            </Link>
-            <Link
-              href="/dashboard"
-              className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-bold text-xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-lg"
-            >
-              Voice Assistant 🎤
+              Get Started 🚀
             </Link>
           </div>
         </div>

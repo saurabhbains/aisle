@@ -1,75 +1,33 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import VoiceInput from '@/components/VoiceInput';
-import PDFUpload from '@/components/PDFUpload';
-import VenueCard from '@/components/VenueCard';
-import EmailPreview from '@/components/EmailPreview';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [criteria, setCriteria] = useState<any>(null);
   const [transcription, setTranscription] = useState('');
-  const [venueInfo, setVenueInfo] = useState<any>(null);
-  const [emailContent, setEmailContent] = useState('');
-  const [emailSubject, setEmailSubject] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [coupleName, setCoupleName] = useState('');
-  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
 
-  const handleCriteriaExtracted = (extractedCriteria: any, text: string) => {
+  const handleCriteriaExtracted = async (extractedCriteria: any, text: string) => {
     setCriteria(extractedCriteria);
     setTranscription(text);
-  };
 
-  const handleVenueExtracted = (extracted: any) => {
-    setVenueInfo(extracted);
-  };
+    // Automatically start searching for venues
+    setIsSearching(true);
 
-  const handleGenerateEmail = async () => {
-    if (!venueInfo || !criteria) {
-      alert('Please add both your criteria and venue information first');
-      return;
-    }
-
-    setIsGeneratingEmail(true);
     try {
-      const response = await fetch('/api/generate-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          venueName: venueInfo.venueName,
-          venueInfo,
-          criteria,
-          coupleName: coupleName || 'Prospective Couple',
-        }),
-      });
+      // Navigate to venues page with criteria
+      const params = new URLSearchParams();
+      params.set('criteria', JSON.stringify(extractedCriteria));
+      params.set('autoSearch', 'true');
 
-      const data = await response.json();
-
-      if (data.success) {
-        setEmailContent(data.emailContent);
-        setEmailSubject(data.subject);
-      } else {
-        alert('Failed to generate email: ' + data.error);
-      }
+      router.push(`/venues?${params.toString()}`);
     } catch (error) {
-      console.error('Email generation error:', error);
-      alert('Failed to generate email');
-    } finally {
-      setIsGeneratingEmail(false);
-    }
-  };
-
-  const handleSendEmail = async (to: string, subject: string, body: string) => {
-    const response = await fetch('/api/send-email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ to, subject, emailBody: body }),
-    });
-
-    const data = await response.json();
-
-    if (!data.success) {
-      throw new Error(data.error);
+      console.error('Navigation error:', error);
+      setIsSearching(false);
     }
   };
 
@@ -82,140 +40,131 @@ export default function DashboardPage() {
             💍 Aisle
           </h1>
           <p className="text-xl text-gray-600">
-            AI-Powered Wedding Planning Assistant
+            AI-Powered Wedding Venue Discovery
           </p>
           <p className="text-gray-500 mt-2">
-            Find your perfect venue in minutes, not months
+            Just tell us what you're looking for, we'll find the perfect venues
           </p>
         </div>
 
         {/* Couple Name Input */}
         <div className="max-w-2xl mx-auto mb-8">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Your Names (Optional)
+          </label>
           <input
             type="text"
-            placeholder="Enter your names (e.g., Sarah & John)"
+            placeholder="e.g., Sarah & John"
             value={coupleName}
             onChange={(e) => setCoupleName(e.target.value)}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent"
           />
         </div>
 
-        {/* Step 1: Voice Input */}
+        {/* Voice Input */}
         <div className="max-w-2xl mx-auto mb-8">
           <div className="flex items-center mb-4">
-            <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">
+            <div className="bg-pink-600 text-white rounded-full w-10 h-10 flex items-center justify-center font-bold mr-3 text-lg">
               1
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">Record Your Criteria</h2>
+            <h2 className="text-2xl font-semibold text-gray-800">Tell Us What You're Looking For</h2>
           </div>
+          <p className="text-gray-600 mb-4">
+            Speak or type your wedding criteria (location, date, guest count, budget, style preferences, etc.)
+          </p>
           <VoiceInput onCriteriaExtracted={handleCriteriaExtracted} />
         </div>
 
         {/* Show Extracted Criteria */}
-        {criteria && (
+        {criteria && !isSearching && (
           <div className="max-w-2xl mx-auto mb-8">
             <div className="bg-green-50 p-6 rounded-lg border border-green-200">
               <h3 className="text-lg font-bold text-green-900 mb-3">✅ Criteria Captured!</h3>
               <p className="text-sm text-gray-600 mb-3"><strong>You said:</strong> "{transcription}"</p>
-              <div className="grid grid-cols-2 gap-3">
-                {criteria.date && (
-                  <div>
-                    <span className="text-sm text-gray-600">Date:</span>
-                    <p className="font-semibold">{criteria.date}</p>
-                  </div>
-                )}
-                {criteria.location && (
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                {criteria.hardCriteria?.location && (
                   <div>
                     <span className="text-sm text-gray-600">Location:</span>
-                    <p className="font-semibold">{criteria.location}</p>
+                    <p className="font-semibold">{criteria.hardCriteria.location}</p>
                   </div>
                 )}
-                {criteria.guestCount && (
+                {criteria.hardCriteria?.guestCount && (
                   <div>
                     <span className="text-sm text-gray-600">Guests:</span>
-                    <p className="font-semibold">{criteria.guestCount}</p>
+                    <p className="font-semibold">{criteria.hardCriteria.guestCount}</p>
                   </div>
                 )}
-                {criteria.budget && (
+                {criteria.hardCriteria?.budget && (
                   <div>
                     <span className="text-sm text-gray-600">Budget:</span>
-                    <p className="font-semibold">£{criteria.budget}</p>
+                    <p className="font-semibold">£{criteria.hardCriteria.budget?.toLocaleString()}</p>
+                  </div>
+                )}
+                {criteria.softCriteria?.aestheticPreference && (
+                  <div>
+                    <span className="text-sm text-gray-600">Style:</span>
+                    <p className="font-semibold">{criteria.softCriteria.aestheticPreference}</p>
                   </div>
                 )}
               </div>
+
+              <p className="text-sm text-green-800 mt-3">
+                🎉 Redirecting to venue search...
+              </p>
             </div>
           </div>
         )}
 
-        {/* Step 2: PDF Upload */}
-        <div className="max-w-2xl mx-auto mb-8">
-          <div className="flex items-center mb-4">
-            <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">
-              2
+        {isSearching && (
+          <div className="max-w-2xl mx-auto">
+            <div className="bg-blue-50 p-8 rounded-lg border border-blue-200 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h3 className="text-lg font-bold text-blue-900 mb-2">Scraping the web for venues...</h3>
+              <p className="text-blue-800">Finding the best wedding venues matching your criteria</p>
             </div>
-            <h2 className="text-xl font-semibold text-gray-800">Upload Venue Brochure</h2>
           </div>
-          <PDFUpload onVenueExtracted={handleVenueExtracted} />
-        </div>
+        )}
 
-        {/* Show Venue Info */}
-        {venueInfo && (
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="flex items-center mb-4">
-              <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">
-                3
+        {/* How It Works */}
+        {!criteria && (
+          <div className="max-w-4xl mx-auto mt-16">
+            <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
+              How It Works
+            </h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="bg-pink-100 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <span className="text-2xl">🎤</span>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">1. Speak Your Criteria</h3>
+                <p className="text-gray-600 text-sm">
+                  Tell us your wedding date, location, budget, guest count, and style preferences
+                </p>
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">Venue Details</h2>
-            </div>
-            <VenueCard
-              venueInfo={venueInfo}
-              onGenerateEmail={handleGenerateEmail}
-            />
-          </div>
-        )}
 
-        {/* Generate Email Button */}
-        {venueInfo && criteria && !emailContent && (
-          <div className="max-w-2xl mx-auto mb-8 text-center">
-            <button
-              onClick={handleGenerateEmail}
-              disabled={isGeneratingEmail}
-              className={`text-white font-bold py-4 px-8 rounded-full text-lg transition-all transform hover:scale-105 ${
-                isGeneratingEmail
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-purple-600 hover:bg-purple-700'
-              }`}
-            >
-              {isGeneratingEmail ? '✨ Generating Email...' : '✨ Generate Personalized Email'}
-            </button>
-          </div>
-        )}
-
-        {/* Show Email Preview */}
-        {emailContent && (
-          <div className="max-w-2xl mx-auto mb-8">
-            <div className="flex items-center mb-4">
-              <div className="bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center font-bold mr-3">
-                4
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="bg-blue-100 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">2. AI Finds Venues</h3>
+                <p className="text-gray-600 text-sm">
+                  We scrape the web for real venues, extract emails, pricing, and details
+                </p>
               </div>
-              <h2 className="text-xl font-semibold text-gray-800">Send Email</h2>
+
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                <div className="bg-green-100 rounded-full w-12 h-12 flex items-center justify-center mb-4">
+                  <span className="text-2xl">📧</span>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">3. Send Inquiries</h3>
+                <p className="text-gray-600 text-sm">
+                  Review AI-generated emails and send to multiple venues with one click
+                </p>
+              </div>
             </div>
-            <EmailPreview
-              subject={emailSubject}
-              emailBody={emailContent}
-              venueName={venueInfo?.venueName || 'Venue'}
-              onSend={handleSendEmail}
-              onEdit={(newBody) => setEmailContent(newBody)}
-            />
           </div>
         )}
-
-        {/* Footer */}
-        <div className="text-center mt-16 pb-8">
-          <p className="text-gray-500 text-sm">
-            Built with ❤️ for couples planning their perfect day
-          </p>
-        </div>
       </div>
     </div>
   );

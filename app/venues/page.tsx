@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MatchResult } from '@/lib/venue-matcher';
 
 export default function VenuesPage() {
+  const searchParams = useSearchParams();
   const [matchedVenues, setMatchedVenues] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -30,16 +32,52 @@ export default function VenuesPage() {
   const [selectedVenueDetails, setSelectedVenueDetails] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  const handleSearch = async () => {
-    console.log('Search button clicked!');
+  // Auto-load criteria from URL and search
+  useEffect(() => {
+    const criteriaParam = searchParams.get('criteria');
+    const autoSearch = searchParams.get('autoSearch');
+
+    if (criteriaParam) {
+      try {
+        const parsedCriteria = JSON.parse(criteriaParam);
+
+        // Convert to form format
+        const formCriteria = {
+          hardCriteria: {
+            location: parsedCriteria.hardCriteria?.location || '',
+            guestCount: parsedCriteria.hardCriteria?.guestCount?.toString() || '',
+            budget: parsedCriteria.hardCriteria?.budget?.toString() || '',
+            needsAccommodation: parsedCriteria.hardCriteria?.needsAccommodation || false,
+            cateringPreference: parsedCriteria.hardCriteria?.cateringPreference || '',
+          },
+          softCriteria: {
+            needsOutdoorSpace: parsedCriteria.softCriteria?.needsOutdoorSpace || false,
+            aestheticPreference: parsedCriteria.softCriteria?.aestheticPreference || '',
+            preferredAmenities: parsedCriteria.softCriteria?.preferredAmenities || [],
+          },
+        };
+
+        setCriteria(formCriteria);
+
+        // Auto-trigger search if specified
+        if (autoSearch === 'true') {
+          setTimeout(() => handleSearch(parsedCriteria), 500);
+        }
+      } catch (error) {
+        console.error('Failed to parse criteria from URL:', error);
+      }
+    }
+  }, [searchParams]);
+
+  const handleSearch = async (providedCriteria?: any) => {
+    console.log('Search triggered!');
     setLoading(true);
     setError('');
     setHasSearched(true);
 
     try {
-      console.log('Scraping venues with criteria:', criteria);
-      // Convert form values to proper types
-      const searchCriteria = {
+      // Use provided criteria or convert form values
+      const searchCriteria = providedCriteria || {
         hardCriteria: {
           ...(criteria.hardCriteria.location && { location: criteria.hardCriteria.location }),
           ...(criteria.hardCriteria.guestCount && { guestCount: parseInt(criteria.hardCriteria.guestCount) }),
@@ -53,6 +91,8 @@ export default function VenuesPage() {
           ...(criteria.softCriteria.preferredAmenities.length > 0 && { preferredAmenities: criteria.softCriteria.preferredAmenities }),
         },
       };
+
+      console.log('Scraping venues with criteria:', searchCriteria);
 
       // First, scrape venues from the web
       const scrapeResponse = await fetch('/api/scrape-venues', {
