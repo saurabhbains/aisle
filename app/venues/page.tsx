@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MatchResult } from '@/lib/venue-matcher';
 
+export const dynamic = 'force-dynamic';
+
 export default function VenuesPage() {
   const searchParams = useSearchParams();
   const [matchedVenues, setMatchedVenues] = useState<MatchResult[]>([]);
