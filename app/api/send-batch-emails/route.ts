@@ -4,7 +4,7 @@ import { updateVenueStatus } from '@/lib/venue-database';
 
 export async function POST(request: NextRequest) {
   try {
-    const { emails, from } = await request.json();
+    const { emails, from, demoMode } = await request.json();
 
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
       return NextResponse.json(
@@ -13,7 +13,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Sending batch of ${emails.length} emails...`);
+    // Demo mode: Override all emails to go to demo address
+    const DEMO_EMAIL = 'saurabh.bains2501@gmail.com';
+    const isDemoMode = demoMode === true;
+
+    if (isDemoMode) {
+      console.log(`🎬 DEMO MODE: Sending batch of ${emails.length} emails to ${DEMO_EMAIL}...`);
+    } else {
+      console.log(`Sending batch of ${emails.length} emails...`);
+    }
 
     // Send emails sequentially to avoid rate limiting issues
     const results = [];
@@ -41,8 +49,11 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        // In demo mode, send to demo email instead of real venue email
+        const targetEmail = isDemoMode ? DEMO_EMAIL : email.venueEmail;
+
         const result = await sendVenueEmail(
-          email.venueEmail,
+          targetEmail,
           `Wedding Venue Inquiry - ${email.venueName}`,
           email.emailBody,
           from || process.env.EMAIL_FROM
@@ -55,10 +66,15 @@ export async function POST(request: NextRequest) {
           venueId: email.venueId,
           venueName: email.venueName,
           success: true,
-          messageId: result.messageId
+          messageId: result.messageId,
+          sentTo: targetEmail
         });
 
-        console.log(`✓ Sent email to ${email.venueName} (${email.venueEmail})`);
+        if (isDemoMode) {
+          console.log(`✓ [DEMO] Sent email for ${email.venueName} to ${targetEmail} (original: ${email.venueEmail})`);
+        } else {
+          console.log(`✓ Sent email to ${email.venueName} (${email.venueEmail})`);
+        }
       } catch (error: any) {
         console.error(`✗ Failed to send email to ${email.venueName}:`, error);
         results.push({

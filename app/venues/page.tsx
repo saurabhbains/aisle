@@ -31,6 +31,7 @@ export default function VenuesPage() {
   const [sendingEmails, setSendingEmails] = useState(false);
   const [selectedVenueDetails, setSelectedVenueDetails] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [demoMode, setDemoMode] = useState(true); // Demo mode enabled by default
 
   // Auto-load criteria from URL and search
   useEffect(() => {
@@ -202,14 +203,18 @@ export default function VenuesPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          emails: generatedEmails
+          emails: generatedEmails,
+          demoMode: demoMode
         })
       });
 
       const data = await response.json();
 
       if (data.success) {
-        alert(`Successfully sent ${data.sent} emails! ${data.failed > 0 ? `(${data.failed} failed)` : ''}`);
+        const demoMessage = demoMode
+          ? `\n\n🎬 DEMO MODE: All emails were sent to saurabh.bains2501@gmail.com instead of real venues.`
+          : '';
+        alert(`Successfully sent ${data.sent} emails! ${data.failed > 0 ? `(${data.failed} failed)` : ''}${demoMessage}`);
         setShowEmailReview(false);
         setGeneratedEmails([]);
         setSelectedVenues(new Set());
@@ -615,10 +620,30 @@ export default function VenuesPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                <h2 className="text-2xl font-bold text-gray-900">Review Emails</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Review and edit emails before sending to {generatedEmails.filter(e => e.success).length} venues
-                </p>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Review Emails</h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Review and edit emails before sending to {generatedEmails.filter(e => e.success).length} venues
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-3 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-2">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={demoMode}
+                        onChange={(e) => setDemoMode(e.target.checked)}
+                        className="w-4 h-4 text-pink-600 border-gray-300 rounded focus:ring-pink-500"
+                      />
+                      <span className="ml-2 text-sm font-medium text-gray-900">Demo Mode</span>
+                    </label>
+                    {demoMode && (
+                      <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
+                        All emails → saurabh.bains2501@gmail.com
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
