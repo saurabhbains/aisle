@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { extractCriteriaFromVoice } from '@/lib/ai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -17,6 +13,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Create OpenAI client at runtime
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     // Transcribe audio using Whisper
     const transcription = await openai.audio.transcriptions.create({

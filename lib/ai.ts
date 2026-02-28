@@ -1,10 +1,13 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 export async function extractVenueInfoFromText(text: string) {
+  const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
@@ -37,6 +40,7 @@ If information is not found, use null for that field. Be thorough and extract al
 }
 
 export async function extractCriteriaFromVoice(transcription: string) {
+  const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
@@ -72,6 +76,7 @@ export async function generatePersonalizedEmail(
   criteria: any,
   coupleName: string = "the couple"
 ) {
+  const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [

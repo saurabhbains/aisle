@@ -1,11 +1,11 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function extractVenueInfoFromPDF(buffer: Buffer, fileName: string) {
   try {
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     // Convert PDF to base64
     const base64PDF = buffer.toString('base64');
 

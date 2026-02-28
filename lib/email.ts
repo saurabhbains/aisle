@@ -1,7 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function sendVenueEmail(
   to: string,
   subject: string,
@@ -9,6 +7,7 @@ export async function sendVenueEmail(
   from: string = process.env.EMAIL_FROM || 'onboarding@resend.dev'
 ) {
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const { data, error } = await resend.emails.send({
       from,
       to,
