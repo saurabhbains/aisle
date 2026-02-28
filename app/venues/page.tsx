@@ -27,6 +27,8 @@ export default function VenuesPage() {
   const [showEmailReview, setShowEmailReview] = useState(false);
   const [generatingEmails, setGeneratingEmails] = useState(false);
   const [sendingEmails, setSendingEmails] = useState(false);
+  const [selectedVenueDetails, setSelectedVenueDetails] = useState<any>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const handleSearch = async () => {
     console.log('Search button clicked!');
@@ -509,6 +511,10 @@ export default function VenuesPage() {
                         )}
                         {match.venue.status === 'responded' && (
                           <button
+                            onClick={() => {
+                              setSelectedVenueDetails(match.venue);
+                              setShowDetailsModal(true);
+                            }}
                             className="text-green-600 hover:text-green-900 font-medium"
                           >
                             View Details
@@ -609,6 +615,113 @@ export default function VenuesPage() {
                   className="px-6 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
                 >
                   {sendingEmails ? 'Sending...' : `Send All Emails (${generatedEmails.filter(e => e.success).length})`}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Venue Response Details Modal */}
+        {showDetailsModal && selectedVenueDetails && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+                <h2 className="text-2xl font-bold text-gray-900">{selectedVenueDetails.name}</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Response received {selectedVenueDetails.responseData?.responseDate ? new Date(selectedVenueDetails.responseData.responseDate).toLocaleDateString() : 'recently'}
+                </p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                {selectedVenueDetails.responseData && (
+                  <div className="space-y-6">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                      <div className="flex items-center mb-2">
+                        <span className="text-2xl mr-2">✓</span>
+                        <h3 className="font-semibold text-green-900">Venue Responded!</h3>
+                      </div>
+                      <p className="text-green-800">{selectedVenueDetails.responseData.availability}</p>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Contact Information</h3>
+                      <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+                        <p><span className="font-medium">Contact Person:</span> {selectedVenueDetails.responseData.contactPerson}</p>
+                        <p><span className="font-medium">Email:</span> {selectedVenueDetails.responseData.contactEmail}</p>
+                        <p><span className="font-medium">Phone:</span> {selectedVenueDetails.responseData.contactPhone}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Pricing & Details</h3>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p className="text-gray-800">{selectedVenueDetails.responseData.pricing}</p>
+                        <p className="text-gray-700 mt-2">{selectedVenueDetails.responseData.additionalInfo}</p>
+                      </div>
+                    </div>
+
+                    {selectedVenueDetails.responseData.attachments && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-2">Attachments</h3>
+                        <div className="space-y-2">
+                          {selectedVenueDetails.responseData.attachments.map((attachment: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3">
+                              <div className="flex items-center">
+                                <span className="text-2xl mr-3">📄</span>
+                                <div>
+                                  <p className="font-medium text-gray-900">{attachment.name}</p>
+                                  <p className="text-sm text-gray-500">{attachment.size}</p>
+                                </div>
+                              </div>
+                              <button className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">
+                                Download
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Venue Summary</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-sm text-gray-600">Capacity</p>
+                          <p className="font-semibold text-gray-900">{selectedVenueDetails.capacity} guests</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-sm text-gray-600">Pricing Range</p>
+                          <p className="font-semibold text-gray-900">
+                            £{selectedVenueDetails.pricing.min.toLocaleString()} - £{selectedVenueDetails.pricing.max.toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-sm text-gray-600">Location</p>
+                          <p className="font-semibold text-gray-900">{selectedVenueDetails.location}</p>
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-sm text-gray-600">Accommodation</p>
+                          <p className="font-semibold text-gray-900">
+                            {selectedVenueDetails.hasAccommodation ? `${selectedVenueDetails.accommodationRooms} rooms` : 'Not available'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between">
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                >
+                  Mark as Shortlisted
                 </button>
               </div>
             </div>
