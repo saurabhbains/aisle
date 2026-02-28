@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMockVenueData } from '@/lib/pdf-parser-simple';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '40mb',
+    },
+  },
+};
+
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
