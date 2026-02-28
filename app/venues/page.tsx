@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Filter, X } from 'lucide-react';
+import { Filter, X, Mail, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/top-bar';
 import { VenueCard } from '@/components/venue-card';
 import { useApp } from '@/lib/context';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,13 +20,40 @@ const filterOptions = [
 ];
 
 export default function VenuesPage() {
+  const router = useRouter();
   const { state } = useApp();
   const [activeFilter, setActiveFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedVenues, setSelectedVenues] = useState<Set<string>>(new Set());
 
   const filteredVenues = activeFilter === 'all'
     ? state.venues
     : state.venues.filter(venue => venue.status === activeFilter);
+
+  const toggleVenueSelection = (venueId: string) => {
+    const newSelection = new Set(selectedVenues);
+    if (newSelection.has(venueId)) {
+      newSelection.delete(venueId);
+    } else {
+      newSelection.add(venueId);
+    }
+    setSelectedVenues(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedVenues.size === filteredVenues.length) {
+      setSelectedVenues(new Set());
+    } else {
+      setSelectedVenues(new Set(filteredVenues.map(v => v.id)));
+    }
+  };
+
+  const handleSendEmails = () => {
+    const selectedVenuesList = state.venues.filter(v => selectedVenues.has(v.id));
+    console.log('Sending emails to:', selectedVenuesList);
+    // For now, just show an alert - you can implement actual email functionality later
+    alert(`Preparing to send emails to ${selectedVenues.size} venue(s):\n\n${selectedVenuesList.map(v => v.name).join('\n')}`);
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -44,16 +72,50 @@ export default function VenuesPage() {
                   We found {filteredVenues.length} venue{filteredVenues.length !== 1 ? 's' : ''} that match your criteria
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2"
-              >
-                <Filter className="h-4 w-4" />
-                {showFilters ? 'Hide Filters' : 'Show Filters'}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="flex items-center gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  {showFilters ? 'Hide Filters' : 'Show Filters'}
+                </Button>
+              </div>
             </div>
+
+            {/* Selection Bar */}
+            {filteredVenues.length > 0 && (
+              <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-card p-4">
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleSelectAll}
+                    className="flex items-center gap-2"
+                  >
+                    {selectedVenues.size === filteredVenues.length ? (
+                      <CheckSquare className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Square className="h-5 w-5" />
+                    )}
+                    {selectedVenues.size === filteredVenues.length ? 'Deselect All' : 'Select All'}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {selectedVenues.size} venue{selectedVenues.size !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
+                <Button
+                  onClick={handleSendEmails}
+                  disabled={selectedVenues.size === 0}
+                  className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  <Mail className="h-4 w-4" />
+                  Send Emails ({selectedVenues.size})
+                </Button>
+              </div>
+            )}
 
             {/* Filters */}
             {showFilters && (
@@ -103,12 +165,26 @@ export default function VenuesPage() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredVenues.map((venue) => (
-                <VenueCard
-                  key={venue.id}
-                  venue={venue}
-                  variant="default"
-                  showActions={true}
-                />
+                <div key={venue.id} className="relative">
+                  {/* Selection Checkbox */}
+                  <div className="absolute left-3 top-3 z-10">
+                    <button
+                      onClick={() => toggleVenueSelection(venue.id)}
+                      className="flex h-6 w-6 items-center justify-center rounded bg-white shadow-md transition-colors hover:bg-gray-50"
+                    >
+                      {selectedVenues.has(venue.id) ? (
+                        <CheckSquare className="h-5 w-5 text-primary" />
+                      ) : (
+                        <Square className="h-5 w-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                  <VenueCard
+                    venue={venue}
+                    variant="default"
+                    showActions={true}
+                  />
+                </div>
               ))}
             </div>
           )}
