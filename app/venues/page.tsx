@@ -7,6 +7,7 @@ export default function VenuesPage() {
   const [matchedVenues, setMatchedVenues] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
   const [criteria, setCriteria] = useState({
     hardCriteria: {
       location: '',
@@ -27,6 +28,7 @@ export default function VenuesPage() {
     console.log('Search button clicked!');
     setLoading(true);
     setError('');
+    setHasSearched(true);
 
     try {
       console.log('Sending request with criteria:', criteria);
@@ -58,9 +60,7 @@ export default function VenuesPage() {
       if (data.success) {
         console.log(`Found ${data.results.length} matching venues out of ${data.totalVenues} total`);
         setMatchedVenues(data.results);
-        if (data.results.length === 0) {
-          setError(`No venues found matching your criteria. Searched ${data.totalVenues} venues.`);
-        }
+        // Don't set error for 0 results, just show the no results UI
       } else {
         setError(data.error || 'Failed to match venues');
       }
@@ -383,7 +383,7 @@ export default function VenuesPage() {
           </div>
         )}
 
-        {!loading && matchedVenues.length === 0 && criteria.hardCriteria.guestCount && (
+        {!loading && hasSearched && matchedVenues.length === 0 && !error && (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <div className="text-5xl mb-4">😔</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">No Venues Found</h3>
@@ -399,7 +399,7 @@ export default function VenuesPage() {
           </div>
         )}
 
-        {matchedVenues.length === 0 && !loading && !error && !criteria.hardCriteria.guestCount && (
+        {!hasSearched && (
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <p className="text-gray-500">Enter your criteria above and click "Search Venues" to see matching venues</p>
           </div>
