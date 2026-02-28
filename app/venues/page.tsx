@@ -490,7 +490,7 @@ export default function VenuesPage() {
                         <div className="text-sm text-gray-900">
                           {match.venue.pricing?.min && match.venue.pricing?.max
                             ? `£${match.venue.pricing.min.toLocaleString()} - £${match.venue.pricing.max.toLocaleString()}`
-                            : match.venue.pricing || 'Contact for pricing'}
+                            : typeof match.venue.pricing === 'string' ? match.venue.pricing : 'Contact for pricing'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
