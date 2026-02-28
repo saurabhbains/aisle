@@ -14,7 +14,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Demo mode: Override all emails to go to demo address
-    const DEMO_EMAIL = 'saurabh.bains2501@gmail.com';
+    // NOTE: Using saurabhbains@berkeley.edu because it's the verified email in Resend
+    const DEMO_EMAIL = 'saurabhbains@berkeley.edu';
     const isDemoMode = demoMode === true;
 
     if (isDemoMode) {
@@ -26,31 +27,44 @@ export async function POST(request: NextRequest) {
     // Send emails sequentially to avoid rate limiting issues
     const results = [];
     for (const email of emails) {
+      console.log(`Processing email for ${email.venueName}:`, {
+        success: email.success,
+        hasBody: !!email.emailBody,
+        hasVenueEmail: !!email.venueEmail,
+        venueEmail: email.venueEmail
+      });
+
       if (!email.success || !email.emailBody || !email.venueEmail) {
+        const error = `Missing email data: success=${email.success}, body=${!!email.emailBody}, venueEmail=${!!email.venueEmail}`;
+        console.error(`❌ ${email.venueName}: ${error}`);
         results.push({
           venueId: email.venueId,
           venueName: email.venueName,
           success: false,
-          error: 'Missing email data or email generation failed'
+          error
         });
         continue;
       }
 
       try {
-        // Validate email format
+        // In demo mode, skip validation of original email since we're not using it
+        // In production mode, validate the venue email
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email.venueEmail)) {
+        if (!isDemoMode && !emailRegex.test(email.venueEmail)) {
+          const error = `Invalid email address: ${email.venueEmail}`;
+          console.error(`❌ ${email.venueName}: ${error}`);
           results.push({
             venueId: email.venueId,
             venueName: email.venueName,
             success: false,
-            error: 'Invalid email address'
+            error
           });
           continue;
         }
 
         // In demo mode, send to demo email instead of real venue email
         const targetEmail = isDemoMode ? DEMO_EMAIL : email.venueEmail;
+        console.log(`Attempting to send email for ${email.venueName} to ${targetEmail}...`);
 
         const result = await sendVenueEmail(
           targetEmail,

@@ -75,14 +75,27 @@ function evaluateVenue(venue: Venue, criteria: Criteria): MatchResult {
 
   // Budget (venue max price must be <= budget)
   if (hardCriteria.budget) {
-    const budgetMatch = venue.pricing.min <= hardCriteria.budget;
-    hardCriteriaDetails.budget = {
-      pass: budgetMatch,
-      reason: budgetMatch
-        ? `Starting from £${venue.pricing.min.toLocaleString()} within budget of £${hardCriteria.budget.toLocaleString()}`
-        : `Starting from £${venue.pricing.min.toLocaleString()} exceeds budget of £${hardCriteria.budget.toLocaleString()}`
-    };
-    if (!budgetMatch) hardCriteriaPass = false;
+    // Handle both string and object pricing
+    const pricingMin = typeof venue.pricing === 'object' && venue.pricing.min !== undefined
+      ? venue.pricing.min
+      : null;
+
+    if (pricingMin !== null) {
+      const budgetMatch = pricingMin <= hardCriteria.budget;
+      hardCriteriaDetails.budget = {
+        pass: budgetMatch,
+        reason: budgetMatch
+          ? `Starting from £${pricingMin.toLocaleString()} within budget of £${hardCriteria.budget.toLocaleString()}`
+          : `Starting from £${pricingMin.toLocaleString()} exceeds budget of £${hardCriteria.budget.toLocaleString()}`
+      };
+      if (!budgetMatch) hardCriteriaPass = false;
+    } else {
+      // If pricing is a string or unavailable, we can't validate against budget
+      hardCriteriaDetails.budget = {
+        pass: true, // Don't exclude venues with unknown pricing
+        reason: `Pricing: ${venue.pricing || 'Contact venue'} (unable to validate against budget)`
+      };
+    }
   }
 
   // Accommodation (must have if required)

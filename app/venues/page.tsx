@@ -212,7 +212,7 @@ export default function VenuesPage() {
 
       if (data.success) {
         const demoMessage = demoMode
-          ? `\n\n🎬 DEMO MODE: All emails were sent to saurabh.bains2501@gmail.com instead of real venues.`
+          ? `\n\n🎬 DEMO MODE: All emails were sent to saurabhbains@berkeley.edu instead of real venues.`
           : '';
         alert(`Successfully sent ${data.sent} emails! ${data.failed > 0 ? `(${data.failed} failed)` : ''}${demoMessage}`);
         setShowEmailReview(false);
@@ -488,7 +488,9 @@ export default function VenuesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          £{match.venue.pricing.min.toLocaleString()} - £{match.venue.pricing.max.toLocaleString()}
+                          {match.venue.pricing?.min && match.venue.pricing?.max
+                            ? `£${match.venue.pricing.min.toLocaleString()} - £${match.venue.pricing.max.toLocaleString()}`
+                            : match.venue.pricing || 'Contact for pricing'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -639,7 +641,7 @@ export default function VenuesPage() {
                     </label>
                     {demoMode && (
                       <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
-                        All emails → saurabh.bains2501@gmail.com
+                        All emails → saurabhbains@berkeley.edu
                       </span>
                     )}
                   </div>
@@ -776,7 +778,9 @@ export default function VenuesPage() {
                         <div className="bg-gray-50 rounded-lg p-3">
                           <p className="text-sm text-gray-600">Pricing Range</p>
                           <p className="font-semibold text-gray-900">
-                            £{selectedVenueDetails.pricing.min.toLocaleString()} - £{selectedVenueDetails.pricing.max.toLocaleString()}
+                            {selectedVenueDetails.pricing?.min && selectedVenueDetails.pricing?.max
+                              ? `£${selectedVenueDetails.pricing.min.toLocaleString()} - £${selectedVenueDetails.pricing.max.toLocaleString()}`
+                              : selectedVenueDetails.pricing || 'Contact for pricing'}
                           </p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-3">
