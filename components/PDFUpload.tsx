@@ -11,8 +11,14 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
   const [fileName, setFileName] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File input changed');
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
+
+    console.log('File selected:', file.name, file.type);
 
     if (file.type !== 'application/pdf') {
       alert('Please upload a PDF file');
@@ -65,6 +71,7 @@ export default function PDFUpload({ onVenueExtracted }: PDFUploadProps) {
         <label
           htmlFor="pdf-upload"
           className="cursor-pointer flex flex-col items-center space-y-3"
+          onClick={() => console.log('Label clicked')}
         >
           {isUploading ? (
             <>
