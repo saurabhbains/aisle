@@ -34,14 +34,21 @@ export async function POST(request: NextRequest) {
 
     console.log(`Processing email from ${fromEmail} with subject: ${subject}`);
 
-    // Extract email body and attachments using Resend API
-    // Note: Resend webhook doesn't include body/attachments directly
-    // We need to fetch them using the Received Emails API
-    const emailDetails = await fetchEmailDetails(emailId);
+    // Check if this is a test/simulated email (test emails have text/html already in payload)
+    let emailDetails;
+    if (emailData.text || emailData.html) {
+      // Simulated/test email - use data directly from payload
+      console.log('Using email data from payload (test mode)');
+      emailDetails = emailData;
+    } else {
+      // Real Resend webhook - fetch full details using API
+      console.log('Fetching email details from Resend API');
+      emailDetails = await fetchEmailDetails(emailId);
 
-    if (!emailDetails) {
-      console.error('Failed to fetch email details');
-      return NextResponse.json({ success: false, error: 'Failed to fetch email details' });
+      if (!emailDetails) {
+        console.error('Failed to fetch email details');
+        return NextResponse.json({ success: false, error: 'Failed to fetch email details' });
+      }
     }
 
     // Find which venue this email is from by matching the sender email
