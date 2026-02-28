@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 export async function POST(request: NextRequest) {
@@ -17,14 +17,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract criteria from transcript
-    const extractionMessage = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 2048,
-      system: [
+    // Extract criteria from transcript using OpenAI
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
         {
-          type: 'text',
-          text: `You are a wedding venue assistant that extracts wedding criteria from natural language.
+          role: 'system',
+          content: `You are a wedding venue assistant that extracts wedding criteria from natural language.
 
 Extract the following information from the user's description:
 - Date / Month / Season
@@ -93,21 +92,17 @@ Return the information in this JSON format:
   ]
 }
 
-Only include criteria that were mentioned. Use "Not specified" for missing information.`,
-          cache_control: { type: 'ephemeral' },
+Only include criteria that were mentioned. Use "Not specified" for missing information. Return ONLY the JSON, no other text.`,
         },
-      ],
-      messages: [
         {
           role: 'user',
           content: transcript,
         },
       ],
+      temperature: 0.3,
     });
 
-    const extractedText = extractionMessage.content[0].type === 'text'
-      ? extractionMessage.content[0].text
-      : '';
+    const extractedText = completion.choices[0].message.content || '';
 
     // Parse JSON from response
     const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
