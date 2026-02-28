@@ -48,11 +48,80 @@ export default function VenuesPage() {
     }
   };
 
-  const handleSendEmails = () => {
+  const [isSending, setIsSending] = useState(false);
+  const [sendComplete, setSendComplete] = useState(false);
+  const [sendResults, setSendResults] = useState<any>(null);
+
+  const handleSendEmails = async () => {
     const selectedVenuesList = state.venues.filter(v => selectedVenues.has(v.id));
-    console.log('Sending emails to:', selectedVenuesList);
-    // For now, just show an alert - you can implement actual email functionality later
-    alert(`Preparing to send emails to ${selectedVenues.size} venue(s):\n\n${selectedVenuesList.map(v => v.name).join('\n')}`);
+
+    const confirmed = window.confirm(
+      `Ready to send inquiry emails to ${selectedVenues.size} venue(s)?\n\n${selectedVenuesList.map(v => v.name).join('\n')}\n\nNote: In demo mode, all emails will be sent to saurabhbains@berkeley.edu`
+    );
+
+    if (!confirmed) return;
+
+    setIsSending(true);
+    setSendComplete(false);
+
+    try {
+      // Step 1: Generate emails
+      console.log('Generating emails for selected venues...');
+      const generateResponse = await fetch('/api/generate-batch-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          venues: selectedVenuesList.map(v => ({
+            venue: {
+              id: v.id,
+              name: v.name,
+              email: v.contact?.email || '',
+              ...v
+            }
+          })),
+          criteria: state.criteria,
+          coupleName: 'Wedding Couple'
+        })
+      });
+
+      const generateData = await generateResponse.json();
+      console.log('Email generation result:', generateData);
+
+      if (!generateData.success) {
+        throw new Error(generateData.error || 'Failed to generate emails');
+      }
+
+      // Step 2: Send emails (in demo mode, sends to saurabhbains@berkeley.edu)
+      console.log('Sending generated emails...');
+      const sendResponse = await fetch('/api/send-batch-emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emails: generateData.emails,
+          demoMode: true, // Always demo mode for safety
+          from: 'saurabhbains@berkeley.edu'
+        })
+      });
+
+      const sendData = await sendResponse.json();
+      console.log('Email send result:', sendData);
+
+      if (!sendData.success) {
+        throw new Error(sendData.error || 'Failed to send emails');
+      }
+
+      setSendResults(sendData);
+      setSendComplete(true);
+      setSelectedVenues(new Set()); // Clear selection
+
+      // Show success message
+      alert(`✓ Successfully sent ${sendData.sent} email(s) to saurabhbains@berkeley.edu!\n\nCheck your Berkeley email inbox.`);
+    } catch (error: any) {
+      console.error('Error sending emails:', error);
+      alert(`✗ Error: ${error.message}`);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -108,11 +177,20 @@ export default function VenuesPage() {
                 </div>
                 <Button
                   onClick={handleSendEmails}
-                  disabled={selectedVenues.size === 0}
+                  disabled={selectedVenues.size === 0 || isSending}
                   className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                 >
-                  <Mail className="h-4 w-4" />
-                  Send Emails ({selectedVenues.size})
+                  {isSending ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="h-4 w-4" />
+                      Send Emails ({selectedVenues.size})
+                    </>
+                  )}
                 </Button>
               </div>
             )}
