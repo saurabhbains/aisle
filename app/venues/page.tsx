@@ -24,6 +24,7 @@ export default function VenuesPage() {
   const [selectedVenues, setSelectedVenues] = useState<Set<string>>(new Set());
 
   const handleSearch = async () => {
+    alert('Search button clicked!');
     console.log('Search button clicked!');
     setLoading(true);
     setError('');
