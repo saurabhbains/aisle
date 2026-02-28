@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 
-function getOpenAIClient() {
+export function getOpenAIClient() {
   return new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
