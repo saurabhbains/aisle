@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MatchResult } from '@/lib/venue-matcher';
 
 export const dynamic = 'force-dynamic';
 
-export default function VenuesPage() {
+function VenuesContent() {
   const searchParams = useSearchParams();
   const [matchedVenues, setMatchedVenues] = useState<MatchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -819,5 +819,14 @@ export default function VenuesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+
+export default function VenuesPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="text-lg">Loading...</div></div>}>
+      <VenuesContent />
+    </Suspense>
   );
 }
