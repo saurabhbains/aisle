@@ -1,8 +1,9 @@
-import pdf from 'pdf-parse';
-
+// Using dynamic import for pdf-parse to work with Next.js
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const data = await pdf(buffer);
+    // Dynamic import for CommonJS module compatibility
+    const pdfParse = (await import('pdf-parse')).default;
+    const data = await pdfParse(buffer);
     return data.text;
   } catch (error) {
     console.error('PDF parsing error:', error);
