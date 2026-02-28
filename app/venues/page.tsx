@@ -98,6 +98,20 @@ export default function VenuesPage() {
       console.log('Email generation result:', generateData);
       console.log('Generated emails:', generateData.emails);
 
+      // Debug: Check each email object
+      if (generateData.emails) {
+        generateData.emails.forEach((email: any, idx: number) => {
+          console.log(`Email ${idx}:`, {
+            venueName: email.venueName,
+            hasSuccess: email.success !== undefined,
+            success: email.success,
+            hasEmailBody: !!email.emailBody,
+            hasVenueEmail: !!email.venueEmail,
+            venueEmail: email.venueEmail
+          });
+        });
+      }
+
       if (!generateData.success) {
         throw new Error(generateData.error || 'Failed to generate emails');
       }
