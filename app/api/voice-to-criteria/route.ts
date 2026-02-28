@@ -7,65 +7,17 @@ const anthropic = new Anthropic({
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const audioFile = formData.get('audio') as File;
+    const body = await request.json();
+    const transcript = body.transcript;
 
-    if (!audioFile) {
+    if (!transcript) {
       return NextResponse.json(
-        { error: 'No audio file provided' },
+        { error: 'No transcript provided' },
         { status: 400 }
       );
     }
 
-    // Convert audio to base64
-    const audioBuffer = await audioFile.arrayBuffer();
-    const audioBase64 = Buffer.from(audioBuffer).toString('base64');
-
-    // Step 1: Transcribe audio using Claude (with prompt caching for efficiency)
-    const transcriptionMessage = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1024,
-      system: [
-        {
-          type: 'text',
-          text: 'You are a helpful assistant that transcribes audio. Convert the speech to text accurately.',
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'audio/webm',
-                data: audioBase64,
-              },
-              cache_control: { type: 'ephemeral' },
-            },
-            {
-              type: 'text',
-              text: 'Please transcribe this audio recording.',
-            },
-          ],
-        },
-      ],
-    });
-
-    const transcript = transcriptionMessage.content[0].type === 'text'
-      ? transcriptionMessage.content[0].text
-      : '';
-
-    if (!transcript) {
-      return NextResponse.json(
-        { error: 'Failed to transcribe audio' },
-        { status: 500 }
-      );
-    }
-
-    // Step 2: Extract criteria from transcript
+    // Extract criteria from transcript
     const extractionMessage = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 2048,
