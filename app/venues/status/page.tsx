@@ -163,7 +163,6 @@ export default function StatusDashboardPage() {
           venueName: venue.name,
           venueInfo: {
             location: venue.location,
-            description: venue.description,
             features: venue.features,
             missingInfo: venue.missingInfoItems
           },
