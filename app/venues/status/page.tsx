@@ -906,7 +906,7 @@ Sarah & John`;
                   disabled={!simulatedResponseText.trim() || isProcessingSimulate}
                   className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  {isProcessingSimulate ? 'Extracting...' : 'Extract Information'}
+                  {isProcessingSimulate ? 'Sending...' : 'Send Email'}
                 </Button>
               </div>
             </div>
