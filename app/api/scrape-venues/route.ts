@@ -20,47 +20,45 @@ export async function POST(request: NextRequest) {
     const searchQuery = buildSearchQuery(criteria);
     console.log('Search query:', searchQuery);
 
-    // Use GPT-4 to search the web and extract venue information
+    // Use GPT-4o to search the web and extract venue information
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
           role: "system",
-          content: `You are a wedding venue research assistant. Search the web for wedding venues matching the user's criteria and extract detailed information.
+          content: `You are a wedding venue research assistant. Search the web for wedding venues matching the user's criteria.
 
 For each venue, extract:
 - name: Venue name
-- email: Contact email (look for "weddings@", "events@", "enquiries@", "info@" or similar)
+- email: Contact email from website
 - website: Website URL
 - location: Full address
 - city: City name
-- capacity: Maximum guest capacity (number)
-- pricing: Pricing range if available (min and max in GBP)
-- hasAccommodation: Whether they have guest rooms (boolean)
-- accommodationRooms: Number of rooms if available
-- hasOutdoorSpace: Whether they have outdoor ceremony/reception space
+- capacity: Max guest capacity (number)
+- pricing: Price range in GBP (min/max if available)
+- hasAccommodation: Has guest rooms (boolean)
+- accommodationRooms: Number of rooms
+- hasOutdoorSpace: Has outdoor space (boolean)
 - cateringOptions: "in-house", "external", or "both"
-- cateringTypes: Array of dietary options (halal, kosher, vegetarian, vegan, etc.)
-- amenities: Array of amenities (parking, bar, dance floor, etc.)
-- aesthetic: Array of style keywords (rustic, modern, barn, manor, etc.)
+- amenities: Array of amenities (parking, bar, etc.)
+- aesthetic: Array of styles (rustic, modern, etc.)
 - notes: Brief description
 
-Return as JSON array of venues. Find at least 10-20 venues.
+Return JSON with "venues" array. Find 8-12 venues that CLOSELY MATCH the criteria (especially location).
 
-IMPORTANT: You must find REAL email addresses from the venue websites. Look in contact pages, wedding inquiry forms, etc.`
+CRITICAL: Only return venues that match the location specified in the criteria. If they ask for London, only return London venues.`
         },
         {
           role: "user",
-          content: `Find wedding venues matching these criteria:
+          content: `Find wedding venues for: ${searchQuery}
 
-${searchQuery}
+IMPORTANT: Pay close attention to the LOCATION requirement. Only return venues in the specified area.
 
-Search the web for real UK wedding venues. Extract their email addresses from their websites (contact pages, wedding inquiry forms, etc.).
-
-Return JSON array of venues with all the information I requested.`
+Return JSON with all venue details.`
         }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      max_tokens: 4000  // Limit tokens for faster response
     });
 
     const result = completion.choices[0].message.content;
@@ -75,9 +73,34 @@ Return JSON array of venues with all the information I requested.`
       success: true,
       total: venues.length,
       venues: venues.map((v: any, index: number) => ({
-        ...v,
         id: `scraped-${Date.now()}-${index}`,
-        status: 'not_contacted'
+        name: v.name,
+        location: v.location,
+        imageUrl: v.imageUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=300&fit=crop',
+        type: 'country_estate', // Default type
+        capacity: {
+          min: v.capacity ? Math.floor(v.capacity * 0.5) : 50,
+          max: v.capacity || 150
+        },
+        priceRange: {
+          min: v.pricing?.min || 5000,
+          max: v.pricing?.max || 15000
+        },
+        status: 'missing_info',
+        matchScore: 85,
+        features: v.amenities || [],
+        contact: v.email || v.website ? {
+          name: 'Events Team',
+          email: v.email || 'info@venue.com',
+          phone: v.phone || ''
+        } : undefined,
+        missingInfoItems: [
+          'Availability for your specific date',
+          'Detailed pricing and packages',
+          'Venue availability for site visit',
+          'Dietary/catering options',
+          'Setup and vendor policies'
+        ]
       })),
       searchQuery
     });
@@ -91,6 +114,12 @@ Return JSON array of venues with all the information I requested.`
 }
 
 function buildSearchQuery(criteria: any): string {
+  // If criteria is a string (raw text from recap page), parse it
+  if (typeof criteria === 'string') {
+    return `UK wedding venues matching: ${criteria}`;
+  }
+
+  // Otherwise use the structured format
   const parts = [];
 
   if (criteria.hardCriteria?.location) {

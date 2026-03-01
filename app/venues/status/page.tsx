@@ -69,51 +69,61 @@ function VenueRow({ venue, onAllowContact }: VenueRowProps) {
             </div>
           </div>
           <p className="text-sm text-muted-foreground">{venue.location}</p>
-          <div className="mt-2 flex items-center gap-3">
-            <StatusPill status={venue.status} />
-            {venue.callDetails && (
-              <span className="text-xs text-muted-foreground">
-                Call: {venue.callDetails.scheduledDate} at {venue.callDetails.scheduledTime}
-              </span>
-            )}
-            {venue.visitDetails && (
-              <span className="text-xs text-muted-foreground">
-                Visit: {venue.visitDetails.scheduledDate} at {venue.visitDetails.scheduledTime}
-              </span>
+          <div className="mt-2 flex flex-col gap-1">
+            <div className="flex items-center gap-3">
+              <StatusPill status={venue.status} />
+              {venue.callDetails && (
+                <span className="text-xs text-muted-foreground">
+                  Call: {venue.callDetails.scheduledDate} at {venue.callDetails.scheduledTime}
+                </span>
+              )}
+              {venue.visitDetails && (
+                <span className="text-xs text-muted-foreground">
+                  Visit: {venue.visitDetails.scheduledDate} at {venue.visitDetails.scheduledTime}
+                </span>
+              )}
+            </div>
+            {venue.contact?.email && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Mail className="h-3 w-3" />
+                <span>{venue.contact.email}</span>
+              </div>
             )}
           </div>
 
-          {/* Missing info section */}
-          {hasMissingInfo && (
-            <div className="mt-3">
-              <p className="mb-2 text-xs font-medium text-foreground">Missing information</p>
-              <div className="flex flex-wrap gap-2">
-                {venue.missingInfoItems?.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-              {!venue.contactAllowed && (
-                <Button
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onAllowContact?.(venue.id);
-                  }}
-                  className="mt-3 rounded-full bg-foreground text-card hover:bg-foreground/90"
-                >
-                  Send Email
-                </Button>
-              )}
-              {venue.contactAllowed && (
-                <p className="mt-3 text-xs text-secondary">Aisle is reaching out to this venue</p>
-              )}
-            </div>
-          )}
+          {/* Missing info section and Send Email button */}
+          <div className="mt-3">
+            {hasMissingInfo && (
+              <>
+                <p className="mb-2 text-xs font-medium text-foreground">Missing information</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {venue.missingInfoItems?.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
+            {!venue.contactAllowed && (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAllowContact?.(venue.id);
+                }}
+                className="rounded-full bg-foreground text-card hover:bg-foreground/90"
+              >
+                Send Email
+              </Button>
+            )}
+            {venue.contactAllowed && (
+              <p className="text-xs text-secondary">Aisle is reaching out to this venue</p>
+            )}
+          </div>
         </div>
         <Link href={`/venues/${venue.id}`}>
           <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
@@ -144,7 +154,7 @@ export default function StatusDashboardPage() {
   const generateEmailDraft = async (venue: Venue) => {
     try {
       // Get user's criteria from context
-      const criteriaText = state.criteria.map(c => `${c.label}: ${c.value}`).join('\n');
+      const criteriaText = state.criteria.map(c => `${c.value}`).join('\n');
 
       const response = await fetch('/api/generate-email', {
         method: 'POST',
@@ -158,10 +168,7 @@ export default function StatusDashboardPage() {
             missingInfo: venue.missingInfoItems
           },
           criteria: {
-            text: criteriaText,
-            date: 'June 2025',
-            guestCount: '120-150',
-            budget: '$8,000 - $12,000'
+            text: criteriaText
           },
           coupleName: 'Sarah & John'
         })
@@ -177,23 +184,18 @@ export default function StatusDashboardPage() {
     }
 
     // Fallback to simple template if AI fails
+    const criteriaText = state.criteria.map(c => `${c.value}`).join('\n');
     return `Dear ${venue.name} Team,
 
 I hope this email finds you well. I am reaching out regarding wedding venue availability and would like to inquire about the following information:
 
-Missing Information Needed:
-${venue.missingInfoItems?.map(item => `- ${item}`).join('\n') || '- Pricing details\n- Availability'}
-
-Our Wedding Criteria:
-- Guest count: 120-150 guests
-- Preferred date: June 2025
-- Style: Outdoor ceremony with elegant reception
-- Budget: $8,000 - $12,000
+${venue.missingInfoItems && venue.missingInfoItems.length > 0 ? `Missing Information Needed:\n${venue.missingInfoItems.map(item => `- ${item}`).join('\n')}\n\n` : ''}Our Wedding Criteria:
+${criteriaText}
 
 We would greatly appreciate if you could provide the above details at your earliest convenience. We are very interested in your venue and look forward to hearing from you.
 
 Best regards,
-[Your Name]`;
+Sarah & John`;
   };
 
   const handleAllowContact = async (venueId: string) => {

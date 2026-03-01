@@ -1,57 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/top-bar';
 import { cn } from '@/lib/utils';
-
-// Mock venue data matching the design
-const initialVenues = [
-  {
-    id: '1',
-    name: 'The Grand Ballroom',
-    location: 'Downtown, Seattle',
-    imageUrl: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&h=200&fit=crop',
-    criteriaMatches: ['Fits guest count', 'Fits vibe'],
-  },
-  {
-    id: '2',
-    name: 'Willow Creek Barn',
-    location: 'Woodinville, WA',
-    imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=200&h=200&fit=crop',
-    criteriaMatches: ['Fits guest count', 'Outdoor option'],
-  },
-  {
-    id: '3',
-    name: 'Botanical Gardens Pavilion',
-    location: 'Bellevue, WA',
-    imageUrl: 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=200&h=200&fit=crop',
-    criteriaMatches: ['Fits vibe', 'Garden setting'],
-  },
-  {
-    id: '4',
-    name: 'Lakeside Manor',
-    location: 'Kirkland, WA',
-    imageUrl: 'https://images.unsplash.com/photo-1505236858219-8359eb29e329?w=200&h=200&fit=crop',
-    criteriaMatches: ['Fits guest count', 'Water views'],
-  },
-  {
-    id: '5',
-    name: 'Heritage House',
-    location: 'Capitol Hill, Seattle',
-    imageUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&h=200&fit=crop',
-    criteriaMatches: ['Fits vibe', 'Historic charm'],
-  },
-];
+import { useApp } from '@/lib/context';
 
 export default function InitialVenueListPage() {
   const router = useRouter();
+  const { state } = useApp();
   const [qualifiedOutIds, setQualifiedOutIds] = useState<Set<string>>(new Set());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
+
+  // Convert context venues to the format expected by this page
+  const initialVenues = useMemo(() => {
+    return state.venues.map(venue => ({
+      id: venue.id,
+      name: venue.name,
+      location: venue.location,
+      imageUrl: venue.imageUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&h=200&fit=crop',
+      criteriaMatches: [
+        ...(venue.capacity ? [`Capacity: ${venue.capacity} guests`] : []),
+        ...(venue.budget ? [`Budget: ${venue.budget}`] : []),
+        ...(venue.amenities ? venue.amenities.slice(0, 2) : [])
+      ].filter(Boolean).slice(0, 3) // Max 3 criteria matches
+    }));
+  }, [state.venues]);
 
   const handleQualifyOut = (venueId: string) => {
     setQualifiedOutIds((prev) => {
@@ -164,60 +142,92 @@ export default function InitialVenueListPage() {
           </div>
 
           {/* Venue List */}
-          <div className="flex flex-col gap-4">
-            {sortedVenues.map((venue) => {
-              const isQualifiedOut = qualifiedOutIds.has(venue.id);
-              return (
-                <div
-                  key={venue.id}
-                  className={cn(
-                    'flex items-center gap-6 rounded-xl bg-card p-4 shadow-sm transition-all',
-                    isQualifiedOut && 'opacity-50'
-                  )}
+          {sortedVenues.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="mb-4 rounded-full bg-muted p-6">
+                <svg
+                  className="h-12 w-12 text-muted-foreground"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  {/* Venue Image */}
-                  <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
-                    <Image
-                      src={venue.imageUrl}
-                      alt={venue.name}
-                      fill
-                      className={cn(
-                        'object-cover',
-                        isQualifiedOut && 'grayscale'
-                      )}
-                    />
-                  </div>
-
-                  {/* Venue Info */}
-                  <div className="flex flex-1 flex-col gap-2">
-                    <h3 className="font-serif text-lg font-semibold text-foreground">
-                      {venue.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{venue.location}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {venue.criteriaMatches.map((match) => (
-                        <span
-                          key={match}
-                          className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
-                        >
-                          {match}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Qualify Out Button */}
-                  <Button
-                    variant="outline"
-                    onClick={() => handleQualifyOut(venue.id)}
-                    className="flex-shrink-0 rounded-full border-border text-muted-foreground hover:bg-muted"
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <h2 className="mb-2 font-serif text-2xl font-semibold text-foreground">
+                No venues found
+              </h2>
+              <p className="mb-6 max-w-md text-muted-foreground">
+                We couldn't find any wedding venues matching your current criteria. Try adjusting your requirements to see more options.
+              </p>
+              <Button
+                onClick={() => router.push('/criteria')}
+                className="rounded-full bg-primary px-8 text-primary-foreground hover:bg-primary/90"
+              >
+                Update criteria
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {sortedVenues.map((venue) => {
+                const isQualifiedOut = qualifiedOutIds.has(venue.id);
+                return (
+                  <div
+                    key={venue.id}
+                    className={cn(
+                      'flex items-center gap-6 rounded-xl bg-card p-4 shadow-sm transition-all',
+                      isQualifiedOut && 'opacity-50'
+                    )}
                   >
-                    {isQualifiedOut ? 'Re-qualify' : 'Qualify out'}
-                  </Button>
-                </div>
-              );
-            })}
-          </div>
+                    {/* Venue Image */}
+                    <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
+                      <Image
+                        src={venue.imageUrl}
+                        alt={venue.name}
+                        fill
+                        className={cn(
+                          'object-cover',
+                          isQualifiedOut && 'grayscale'
+                        )}
+                      />
+                    </div>
+
+                    {/* Venue Info */}
+                    <div className="flex flex-1 flex-col gap-2">
+                      <h3 className="font-serif text-lg font-semibold text-foreground">
+                        {venue.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{venue.location}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {venue.criteriaMatches.map((match) => (
+                          <span
+                            key={match}
+                            className="rounded-full border border-border bg-background px-3 py-1 text-xs text-muted-foreground"
+                          >
+                            {match}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Qualify Out Button */}
+                    <Button
+                      variant="outline"
+                      onClick={() => handleQualifyOut(venue.id)}
+                      className="flex-shrink-0 rounded-full border-border text-muted-foreground hover:bg-muted"
+                    >
+                      {isQualifiedOut ? 'Re-qualify' : 'Qualify out'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </main>
 

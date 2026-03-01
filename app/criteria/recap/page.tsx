@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Star, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,8 @@ import { useApp } from '@/lib/context';
 
 export default function CriteriaRecapPage() {
   const router = useRouter();
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
+  const [isLoadingVenues, setIsLoadingVenues] = useState(false);
 
   // Extract must-haves and nice-to-haves from criteria
   const mustHaves = state.criteria
@@ -61,8 +63,44 @@ export default function CriteriaRecapPage() {
     router.push('/criteria');
   };
 
-  const handleConfirm = () => {
-    router.push('/venues/initial');
+  const handleConfirm = async () => {
+    setIsLoadingVenues(true);
+
+    try {
+      // Prepare criteria text for web scraping
+      const criteriaText = `
+Must-haves:
+${displayMustHaves.join('\n')}
+
+Nice-to-haves:
+${displayNiceToHaves.join('\n')}
+      `.trim();
+
+      // Call the scraping API
+      const response = await fetch('/api/scrape-venues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ criteria: criteriaText })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.venues) {
+        // Update context with scraped venues
+        dispatch({ type: 'SET_VENUES', payload: data.venues });
+
+        // Navigate to venues page
+        router.push('/venues/initial');
+      } else {
+        console.error('Failed to scrape venues:', data.error);
+        alert('Failed to load venues. Please try again.');
+        setIsLoadingVenues(false);
+      }
+    } catch (error) {
+      console.error('Error scraping venues:', error);
+      alert('Failed to load venues. Please try again.');
+      setIsLoadingVenues(false);
+    }
   };
 
   return (
@@ -140,9 +178,10 @@ export default function CriteriaRecapPage() {
           </Button>
           <Button
             onClick={handleConfirm}
+            disabled={isLoadingVenues}
             className="min-w-40 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            Confirm & continue
+            {isLoadingVenues ? 'Loading venues...' : 'Confirm & continue'}
           </Button>
         </div>
       </main>

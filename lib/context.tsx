@@ -14,7 +14,8 @@ type Action =
   | { type: 'UPDATE_MISSING_INFO'; payload: MissingInfo }
   | { type: 'SET_EMAIL_DRAFT'; payload: AppState['emailDraft'] }
   | { type: 'APPROVE_EMAIL' }
-  | { type: 'LOAD_STATE'; payload: AppState };
+  | { type: 'LOAD_STATE'; payload: AppState }
+  | { type: 'SET_VENUES'; payload: Venue[] };
 
 const STATE_VERSION = 2; // Increment when data structure changes
 
@@ -68,6 +69,8 @@ function reducer(state: AppState, action: Action): AppState {
       };
     case 'LOAD_STATE':
       return action.payload;
+    case 'SET_VENUES':
+      return { ...state, venues: action.payload };
     default:
       return state;
   }
