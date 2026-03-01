@@ -45,9 +45,11 @@ const statusGroups: { status: VenueStatus; label: string; icon: React.ElementTyp
 interface VenueRowProps {
   venue: Venue;
   onAllowContact?: (venueId: string) => void;
+  onUploadResponse?: (venueId: string) => void;
+  onSimulateResponse?: (venueId: string) => void;
 }
 
-function VenueRow({ venue, onAllowContact }: VenueRowProps) {
+function VenueRow({ venue, onAllowContact, onUploadResponse, onSimulateResponse }: VenueRowProps) {
   const hasMissingInfo = venue.status === 'missing_info' && venue.missingInfoItems && venue.missingInfoItems.length > 0;
 
   return (
@@ -69,6 +71,36 @@ function VenueRow({ venue, onAllowContact }: VenueRowProps) {
             </div>
           </div>
           <p className="text-sm text-muted-foreground">{venue.location}</p>
+
+          {/* Venue details: capacity and pricing */}
+          <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+            {venue.capacity && (
+              <span>👥 {venue.capacity.min}-{venue.capacity.max} guests</span>
+            )}
+            {venue.priceRange && (
+              <span>💰 £{venue.priceRange.min.toLocaleString()}-£{venue.priceRange.max.toLocaleString()}</span>
+            )}
+          </div>
+
+          {/* Features/Amenities */}
+          {venue.features && venue.features.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {venue.features.slice(0, 3).map((feature) => (
+                <span
+                  key={feature}
+                  className="rounded-full border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
+                >
+                  {feature}
+                </span>
+              ))}
+              {venue.features.length > 3 && (
+                <span className="text-xs text-muted-foreground">
+                  +{venue.features.length - 3} more
+                </span>
+              )}
+            </div>
+          )}
+
           <div className="mt-2 flex flex-col gap-1">
             <div className="flex items-center gap-3">
               <StatusPill status={venue.status} />
@@ -83,10 +115,19 @@ function VenueRow({ venue, onAllowContact }: VenueRowProps) {
                 </span>
               )}
             </div>
-            {venue.contact?.email && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Mail className="h-3 w-3" />
-                <span>{venue.contact.email}</span>
+            {venue.contact && (
+              <div className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+                {venue.contact.name && venue.contact.name !== 'Events Team' && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-medium">Contact: {venue.contact.name}</span>
+                  </div>
+                )}
+                {venue.contact.email && (
+                  <div className="flex items-center gap-1.5">
+                    <Mail className="h-3 w-3" />
+                    <span>{venue.contact.email}</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -121,7 +162,33 @@ function VenueRow({ venue, onAllowContact }: VenueRowProps) {
               </Button>
             )}
             {venue.contactAllowed && (
-              <p className="text-xs text-secondary">Aisle is reaching out to this venue</p>
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-secondary">Email sent - awaiting response</p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUploadResponse?.(venue.id);
+                    }}
+                    className="rounded-full text-xs"
+                  >
+                    Upload response
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSimulateResponse?.(venue.id);
+                    }}
+                    className="rounded-full text-xs"
+                  >
+                    Simulate response
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -148,6 +215,14 @@ export default function StatusDashboardPage() {
   const [callBookingMethod, setCallBookingMethod] = useState<'sync' | 'manual'>('sync');
   const [showVisitBookingModal, setShowVisitBookingModal] = useState(false);
   const [visitBookingMethod, setVisitBookingMethod] = useState<'sync' | 'manual'>('sync');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedVenueForUpload, setSelectedVenueForUpload] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
+  const [showSimulateModal, setShowSimulateModal] = useState(false);
+  const [selectedVenueForSimulate, setSelectedVenueForSimulate] = useState<string | null>(null);
+  const [simulatedResponseText, setSimulatedResponseText] = useState('');
+  const [isProcessingSimulate, setIsProcessingSimulate] = useState(false);
 
   const selectedVenue = selectedVenueForEmail ? getVenueById(selectedVenueForEmail) : null;
 
@@ -349,6 +424,234 @@ Sarah & John`;
     setShowVisitBookingModal(false);
   };
 
+  const handleUploadResponse = (venueId: string) => {
+    setSelectedVenueForUpload(venueId);
+    setShowUploadModal(true);
+  };
+
+  const handleSimulateResponse = (venueId: string) => {
+    setSelectedVenueForSimulate(venueId);
+    setShowSimulateModal(true);
+  };
+
+  const handleSubmitSimulatedResponse = async () => {
+    if (!simulatedResponseText.trim() || !selectedVenueForSimulate) return;
+
+    setIsProcessingSimulate(true);
+
+    try {
+      console.log('Processing simulated response for venue:', selectedVenueForSimulate);
+      const response = await fetch('/api/simulate-response', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          venueId: selectedVenueForSimulate,
+          responseText: simulatedResponseText
+        })
+      });
+
+      const data = await response.json();
+      console.log('Simulate response data:', data);
+
+      if (data.success) {
+        const extractedInfo = data.response.extractedInfo;
+
+        // Prepare venue updates with extracted information
+        const venueUpdates: Partial<Venue> = {
+          missingInfoItems: [],
+          status: 'shortlisted'
+        };
+
+        // Update capacity if extracted
+        if (extractedInfo.capacity) {
+          if (typeof extractedInfo.capacity === 'object') {
+            venueUpdates.capacity = {
+              min: extractedInfo.capacity.min || extractedInfo.capacity.recommended || 50,
+              max: extractedInfo.capacity.max || extractedInfo.capacity.recommended || 150
+            };
+          }
+        }
+
+        // Update price range if extracted
+        if (extractedInfo.pricing) {
+          if (typeof extractedInfo.pricing === 'object' && extractedInfo.pricing.venueHire) {
+            const venueHire = parseInt(extractedInfo.pricing.venueHire.replace(/[£,]/g, ''));
+            if (!isNaN(venueHire)) {
+              venueUpdates.priceRange = {
+                min: venueHire,
+                max: venueHire + 5000
+              };
+            }
+          }
+        }
+
+        // Update amenities/features if extracted
+        if (extractedInfo.amenities && Array.isArray(extractedInfo.amenities)) {
+          venueUpdates.features = extractedInfo.amenities;
+        }
+
+        // Update contact information
+        const currentVenue = getVenueById(selectedVenueForSimulate);
+        if (currentVenue) {
+          venueUpdates.contact = {
+            name: extractedInfo.contactPerson || currentVenue.contact?.name || 'Events Team',
+            email: extractedInfo.contactEmail || currentVenue.contact?.email || '',
+            phone: extractedInfo.contactPhone || currentVenue.contact?.phone || ''
+          };
+        }
+
+        // Update venue with all extracted data
+        updateVenue(selectedVenueForSimulate, venueUpdates);
+
+        console.log('Venue updated with extracted data:', venueUpdates);
+        console.log('Extracted information:', extractedInfo);
+
+        // Build summary of extracted information
+        let infoSummary = `✅ AI successfully extracted information from the venue response:\n\n`;
+
+        if (extractedInfo.availability) {
+          infoSummary += `📅 Availability: ${extractedInfo.availability}\n`;
+        }
+
+        if (extractedInfo.pricing) {
+          if (typeof extractedInfo.pricing === 'string') {
+            infoSummary += `💰 Pricing: ${extractedInfo.pricing}\n`;
+          } else if (extractedInfo.pricing.totalEstimate || extractedInfo.pricing.venueHire) {
+            infoSummary += `💰 Pricing: ${extractedInfo.pricing.totalEstimate || extractedInfo.pricing.venueHire}\n`;
+          }
+        }
+
+        if (extractedInfo.capacity) {
+          if (typeof extractedInfo.capacity === 'string') {
+            infoSummary += `👥 Capacity: ${extractedInfo.capacity}\n`;
+          } else if (extractedInfo.capacity.recommended || extractedInfo.capacity.max) {
+            infoSummary += `👥 Capacity: ${extractedInfo.capacity.recommended || extractedInfo.capacity.max} guests\n`;
+          }
+        }
+
+        if (extractedInfo.catering) {
+          if (typeof extractedInfo.catering === 'string') {
+            infoSummary += `🍽️ Catering: ${extractedInfo.catering}\n`;
+          } else if (extractedInfo.catering.options) {
+            infoSummary += `🍽️ Catering: ${extractedInfo.catering.options}\n`;
+          }
+        }
+
+        if (extractedInfo.amenities && Array.isArray(extractedInfo.amenities) && extractedInfo.amenities.length > 0) {
+          infoSummary += `✨ ${extractedInfo.amenities.length} amenities confirmed\n`;
+        }
+
+        if (extractedInfo.siteVisit) {
+          infoSummary += `📍 Site Visit: ${extractedInfo.siteVisit}\n`;
+        }
+
+        if (extractedInfo.contactPerson) {
+          infoSummary += `📧 Contact: ${extractedInfo.contactPerson}`;
+        }
+
+        alert(infoSummary);
+
+        // Close modal and reset
+        setShowSimulateModal(false);
+        setSimulatedResponseText('');
+        setSelectedVenueForSimulate(null);
+      } else {
+        alert('Failed to process response: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error processing simulated response:', error);
+      alert('Failed to process response');
+    } finally {
+      setIsProcessingSimulate(false);
+    }
+  };
+
+  const handleCancelSimulate = () => {
+    setShowSimulateModal(false);
+    setSimulatedResponseText('');
+    setSelectedVenueForSimulate(null);
+  };
+
+  const handleFileUpload = async () => {
+    if (!uploadedFile || !selectedVenueForUpload) return;
+
+    setIsProcessingUpload(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('venueId', selectedVenueForUpload);
+
+      const response = await fetch('/api/parse-pdf', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const extractedData = data.extractedData;
+
+        // Prepare venue updates with extracted information
+        const venueUpdates: Partial<Venue> = {
+          missingInfoItems: [],
+          status: 'shortlisted'
+        };
+
+        // Update features if extracted
+        if (extractedData.amenities && Array.isArray(extractedData.amenities)) {
+          venueUpdates.features = extractedData.amenities;
+        }
+
+        // Extract capacity if available
+        if (extractedData.capacity) {
+          const capacityMatch = extractedData.capacity.match(/(\d+)-(\d+)/);
+          if (capacityMatch) {
+            venueUpdates.capacity = {
+              min: parseInt(capacityMatch[1]),
+              max: parseInt(capacityMatch[2])
+            };
+          }
+        }
+
+        // Extract pricing if available
+        if (extractedData.pricing) {
+          const pricingMatch = extractedData.pricing.match(/£([\d,]+)/);
+          if (pricingMatch) {
+            const price = parseInt(pricingMatch[1].replace(/,/g, ''));
+            venueUpdates.priceRange = {
+              min: price,
+              max: price + 5000
+            };
+          }
+        }
+
+        // Update venue
+        updateVenue(selectedVenueForUpload, venueUpdates);
+
+        console.log('File uploaded and venue updated:', venueUpdates);
+
+        alert('✅ Venue information updated successfully from uploaded file!\n\nAll missing information has been extracted and the venue is now ready for review.');
+        setShowUploadModal(false);
+        setUploadedFile(null);
+        setSelectedVenueForUpload(null);
+      } else {
+        alert('Failed to parse file: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file');
+    } finally {
+      setIsProcessingUpload(false);
+    }
+  };
+
+  const handleCancelUpload = () => {
+    setShowUploadModal(false);
+    setUploadedFile(null);
+    setSelectedVenueForUpload(null);
+  };
+
   const stats = {
     total: state.venues.length,
     inProgress: state.venues.filter(v => 
@@ -503,6 +806,110 @@ Sarah & John`;
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Upload Response Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={handleCancelUpload} />
+          <div className="relative z-10 mx-auto w-full max-w-lg my-8">
+            <div className="rounded-2xl bg-card p-8 shadow-xl">
+              <h2 className="mb-6 text-center font-serif text-2xl font-semibold text-foreground">
+                Upload Venue Response
+              </h2>
+
+              <p className="mb-4 text-center text-sm text-muted-foreground">
+                Upload a PDF brochure or email reply from the venue. We'll extract the missing information automatically.
+              </p>
+
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Select file (PDF, TXT, or Email)
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.eml"
+                  onChange={(e) => setUploadedFile(e.target.files?.[0] || null)}
+                  className="w-full rounded-lg border border-border bg-background px-4 py-2 text-foreground focus:border-primary focus:outline-none"
+                />
+                {uploadedFile && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Selected: {uploadedFile.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelUpload}
+                  className="flex-1 rounded-full"
+                  disabled={isProcessingUpload}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleFileUpload}
+                  className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  disabled={!uploadedFile || isProcessingUpload}
+                >
+                  {isProcessingUpload ? 'Processing...' : 'Upload & Extract'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simulate Response Modal */}
+      {showSimulateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={handleCancelSimulate} />
+          <div className="relative z-10 mx-auto w-full max-w-2xl my-8">
+            <div className="rounded-2xl bg-card p-8 shadow-xl">
+              <h2 className="mb-6 text-center font-serif text-2xl font-semibold text-foreground">
+                Paste Venue Response
+              </h2>
+
+              <p className="mb-4 text-center text-sm text-muted-foreground">
+                Paste the venue's email response below. Our AI will automatically extract all the missing information (availability, pricing, catering options, etc.).
+              </p>
+
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Venue Email Response
+                </label>
+                <textarea
+                  value={simulatedResponseText}
+                  onChange={(e) => setSimulatedResponseText(e.target.value)}
+                  placeholder="Paste the venue's email response here...&#10;&#10;Example:&#10;Hi Sarah & John,&#10;&#10;Thank you for your interest in our venue! We're delighted to confirm that we have availability for June 15, 2025. Our venue hire is £8,500 with catering at £95 per guest..."
+                  className="min-h-[300px] w-full resize-none rounded-lg border border-border bg-background p-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {simulatedResponseText.length} characters
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <Button
+                  variant="outline"
+                  onClick={handleCancelSimulate}
+                  className="flex-1 rounded-full"
+                  disabled={isProcessingSimulate}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitSimulatedResponse}
+                  disabled={!simulatedResponseText.trim() || isProcessingSimulate}
+                  className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  {isProcessingSimulate ? 'Extracting...' : 'Extract Information'}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -871,14 +1278,26 @@ Sarah & John`;
 
                 <TabsContent value="all" className="space-y-3">
                   {state.venues.map((venue) => (
-                    <VenueRow key={venue.id} venue={venue} onAllowContact={handleAllowContact} />
+                    <VenueRow
+                      key={venue.id}
+                      venue={venue}
+                      onAllowContact={handleAllowContact}
+                      onUploadResponse={handleUploadResponse}
+                      onSimulateResponse={handleSimulateResponse}
+                    />
                   ))}
                 </TabsContent>
 
                 {statusGroups.map(({ status }) => (
                   <TabsContent key={status} value={status} className="space-y-3">
                     {getVenuesByStatus(status).map((venue) => (
-                      <VenueRow key={venue.id} venue={venue} onAllowContact={handleAllowContact} />
+                      <VenueRow
+                      key={venue.id}
+                      venue={venue}
+                      onAllowContact={handleAllowContact}
+                      onUploadResponse={handleUploadResponse}
+                      onSimulateResponse={handleSimulateResponse}
+                    />
                     ))}
                   </TabsContent>
                 ))}
