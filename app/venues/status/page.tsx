@@ -222,10 +222,8 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
             )}
             {venue.contactAllowed && venue.status !== 'criteria_not_met' && (
               <div className="flex flex-col gap-2">
-                {!hasMissingInfo && (
-                  <p className="text-xs text-secondary">Email sent - awaiting response</p>
-                )}
-                {hasMissingInfo ? (
+                {/* Show "Send follow-up email" only if venue has missing info AND status is 'missing_info' */}
+                {hasMissingInfo && venue.status === 'missing_info' ? (
                   <Button
                     size="sm"
                     variant="outline"
@@ -238,17 +236,22 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
                     Send follow-up email
                   </Button>
                 ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAddResponse?.(venue.id);
-                    }}
-                    className="rounded-full text-xs"
-                  >
-                    Add venue response
-                  </Button>
+                  <>
+                    {!hasMissingInfo && venue.status === 'awaiting_response' && (
+                      <p className="text-xs text-secondary">Email sent - awaiting response</p>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddResponse?.(venue.id);
+                      }}
+                      className="rounded-full text-xs"
+                    >
+                      Add venue response
+                    </Button>
+                  </>
                 )}
               </div>
             )}
