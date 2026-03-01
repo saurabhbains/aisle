@@ -1,0 +1,891 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { 
+  Phone, 
+  Calendar, 
+  CheckCircle2, 
+  Clock, 
+  AlertCircle,
+  MapPin,
+  Users,
+  ChevronRight,
+  Star,
+  Mail,
+  X
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { TopBar } from '@/components/top-bar';
+import { StatusPill } from '@/components/status-pill';
+import { useApp } from '@/lib/context';
+import type { Venue, VenueStatus } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+const statusGroups: { status: VenueStatus; label: string; icon: React.ElementType }[] = [
+  { status: 'awaiting_response', label: 'Awaiting Response', icon: Clock },
+  { status: 'call_scheduled', label: 'Calls Scheduled', icon: Phone },
+  { status: 'call_completed', label: 'Calls Completed', icon: CheckCircle2 },
+  { status: 'visit_scheduled', label: 'Visits Scheduled', icon: Calendar },
+  { status: 'visit_completed', label: 'Visits Completed', icon: CheckCircle2 },
+  { status: 'missing_info', label: 'Missing Info', icon: AlertCircle },
+];
+
+interface VenueRowProps {
+  venue: Venue;
+  onAllowContact?: (venueId: string) => void;
+}
+
+function VenueRow({ venue, onAllowContact }: VenueRowProps) {
+  const hasMissingInfo = venue.status === 'missing_info' && venue.missingInfoItems && venue.missingInfoItems.length > 0;
+
+  return (
+    <div
+      className="rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-sm"
+    >
+      <div className="flex items-start gap-4">
+        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
+          <MapPin className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Link href={`/venues/${venue.id}`} className="hover:underline">
+              <h3 className="truncate font-serif text-lg font-semibold">{venue.name}</h3>
+            </Link>
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+              {venue.matchScore}%
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">{venue.location}</p>
+          <div className="mt-2 flex items-center gap-3">
+            <StatusPill status={venue.status} />
+            {venue.callDetails && (
+              <span className="text-xs text-muted-foreground">
+                Call: {venue.callDetails.scheduledDate} at {venue.callDetails.scheduledTime}
+              </span>
+            )}
+            {venue.visitDetails && (
+              <span className="text-xs text-muted-foreground">
+                Visit: {venue.visitDetails.scheduledDate} at {venue.visitDetails.scheduledTime}
+              </span>
+            )}
+          </div>
+
+          {/* Missing info section */}
+          {hasMissingInfo && (
+            <div className="mt-3">
+              <p className="mb-2 text-xs font-medium text-foreground">Missing information</p>
+              <div className="flex flex-wrap gap-2">
+                {venue.missingInfoItems?.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+              {!venue.contactAllowed && (
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAllowContact?.(venue.id);
+                  }}
+                  className="mt-3 rounded-full bg-foreground text-card hover:bg-foreground/90"
+                >
+                  Send Email
+                </Button>
+              )}
+              {venue.contactAllowed && (
+                <p className="mt-3 text-xs text-secondary">Aisle is reaching out to this venue</p>
+              )}
+            </div>
+          )}
+        </div>
+        <Link href={`/venues/${venue.id}`}>
+          <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+type EmailModalState = 'closed' | 'intent' | 'draft' | 'send';
+
+export default function StatusDashboardPage() {
+  const router = useRouter();
+  const { state, getVenuesByStatus, updateVenue, getVenueById } = useApp();
+  const [activeTab, setActiveTab] = useState<string>('all');
+  const [emailModalState, setEmailModalState] = useState<EmailModalState>('closed');
+  const [selectedVenueForEmail, setSelectedVenueForEmail] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState<string>('');
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
+  const [selectedVenueForBooking, setSelectedVenueForBooking] = useState<string>('');
+  const [showCallBookingModal, setShowCallBookingModal] = useState(false);
+  const [callBookingMethod, setCallBookingMethod] = useState<'sync' | 'manual'>('sync');
+  const [showVisitBookingModal, setShowVisitBookingModal] = useState(false);
+  const [visitBookingMethod, setVisitBookingMethod] = useState<'sync' | 'manual'>('sync');
+
+  const selectedVenue = selectedVenueForEmail ? getVenueById(selectedVenueForEmail) : null;
+
+  const generateEmailDraft = async (venue: Venue) => {
+    try {
+      // Get user's criteria from context
+      const criteriaText = state.criteria.map(c => `${c.label}: ${c.value}`).join('\n');
+
+      const response = await fetch('/api/generate-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          venueName: venue.name,
+          venueInfo: {
+            location: venue.location,
+            description: venue.description,
+            features: venue.features,
+            missingInfo: venue.missingInfoItems
+          },
+          criteria: {
+            text: criteriaText,
+            date: 'June 2025',
+            guestCount: '120-150',
+            budget: '$8,000 - $12,000'
+          },
+          coupleName: 'Sarah & John'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.emailContent) {
+        return data.emailContent;
+      }
+    } catch (error) {
+      console.error('Error generating AI email:', error);
+    }
+
+    // Fallback to simple template if AI fails
+    return `Dear ${venue.name} Team,
+
+I hope this email finds you well. I am reaching out regarding wedding venue availability and would like to inquire about the following information:
+
+Missing Information Needed:
+${venue.missingInfoItems?.map(item => `- ${item}`).join('\n') || '- Pricing details\n- Availability'}
+
+Our Wedding Criteria:
+- Guest count: 120-150 guests
+- Preferred date: June 2025
+- Style: Outdoor ceremony with elegant reception
+- Budget: $8,000 - $12,000
+
+We would greatly appreciate if you could provide the above details at your earliest convenience. We are very interested in your venue and look forward to hearing from you.
+
+Best regards,
+[Your Name]`;
+  };
+
+  const handleAllowContact = async (venueId: string) => {
+    setSelectedVenueForEmail(venueId);
+    setIsGeneratingEmail(true);
+    setEmailModalState('intent'); // Open modal immediately
+
+    const venue = getVenueById(venueId);
+    if (venue) {
+      const draft = await generateEmailDraft(venue);
+      setEmailDraft(draft);
+    }
+    setIsGeneratingEmail(false);
+  };
+
+  const handleReviewDraft = () => {
+    setEmailModalState('draft');
+  };
+
+  const handleSendDirectly = async () => {
+    if (!selectedVenueForEmail || !selectedVenue) return;
+
+    try {
+      // Send the email to your email (demo mode - not spamming real venues)
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: 'saurabhbains@berkeley.edu',
+          subject: `[DEMO] Wedding Inquiry - ${selectedVenue.name}`,
+          emailBody: emailDraft
+          // from: defaults to onboarding@resend.dev (verified domain)
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        updateVenue(selectedVenueForEmail, {
+          contactAllowed: true,
+          status: 'awaiting_response' as VenueStatus
+        });
+        alert('Email sent successfully to saurabhbains@berkeley.edu!');
+      } else {
+        alert('Failed to send email: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Error sending email. Please try again.');
+    }
+
+    setEmailModalState('closed');
+    setSelectedVenueForEmail(null);
+  };
+
+  const handleProceedToSend = () => {
+    setEmailModalState('send');
+  };
+
+  const handleSendEmail = async () => {
+    if (!selectedVenueForEmail || !selectedVenue) return;
+
+    try {
+      // Send the email to your email (demo mode - not spamming real venues)
+      const response = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: 'saurabhbains@berkeley.edu',
+          subject: `[DEMO] Wedding Inquiry - ${selectedVenue.name}`,
+          emailBody: emailDraft
+          // from: defaults to onboarding@resend.dev (verified domain)
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        updateVenue(selectedVenueForEmail, {
+          contactAllowed: true,
+          status: 'awaiting_response' as VenueStatus
+        });
+        alert('Email sent successfully to saurabhbains@berkeley.edu!');
+      } else {
+        alert('Failed to send email: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error sending email:', error);
+      alert('Error sending email. Please try again.');
+    }
+
+    setEmailModalState('closed');
+    setSelectedVenueForEmail(null);
+  };
+
+  const handleCancelEmail = () => {
+    setEmailModalState('closed');
+    setSelectedVenueForEmail(null);
+    setEmailDraft('');
+  };
+
+  const handleOpenCallBooking = () => {
+    if (selectedVenueForBooking) {
+      setShowCallBookingModal(true);
+    }
+  };
+
+  const handleConfirmCallBooking = () => {
+    if (selectedVenueForBooking) {
+      // In a real app, would integrate with calendar or show availability grid
+      updateVenue(selectedVenueForBooking, {
+        status: 'call_scheduled',
+        callDetails: {
+          scheduledDate: 'March 5, 2026',
+          scheduledTime: '2:00 PM',
+          duration: '30 min'
+        }
+      });
+    }
+    setShowCallBookingModal(false);
+    setSelectedVenueForBooking('');
+  };
+
+  const handleCancelCallBooking = () => {
+    setShowCallBookingModal(false);
+  };
+
+  const handleOpenVisitBooking = () => {
+    if (selectedVenueForBooking) {
+      setShowVisitBookingModal(true);
+    }
+  };
+
+  const handleConfirmVisitBooking = () => {
+    if (selectedVenueForBooking) {
+      updateVenue(selectedVenueForBooking, {
+        status: 'visit_scheduled',
+        visitDetails: {
+          scheduledDate: 'March 10, 2026',
+          scheduledTime: '11:00 AM',
+          duration: '60 min',
+          confirmedGuests: 2,
+          notes: 'Looking forward to seeing the venue!'
+        }
+      });
+    }
+    setShowVisitBookingModal(false);
+    setSelectedVenueForBooking('');
+  };
+
+  const handleCancelVisitBooking = () => {
+    setShowVisitBookingModal(false);
+  };
+
+  const stats = {
+    total: state.venues.length,
+    inProgress: state.venues.filter(v => 
+      ['awaiting_response', 'call_scheduled', 'visit_scheduled'].includes(v.status)
+    ).length,
+    completed: state.venues.filter(v => 
+      ['call_completed', 'visit_completed', 'shortlisted'].includes(v.status)
+    ).length,
+    needsAttention: state.venues.filter(v => v.status === 'missing_info').length,
+  };
+
+  const upcomingCalls = state.venues.filter(v => v.status === 'call_scheduled');
+  const upcomingVisits = state.venues.filter(v => v.status === 'visit_scheduled');
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <TopBar showSettings />
+
+      {/* Email Approval Modal */}
+      {emailModalState !== 'closed' && selectedVenue && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-foreground/20 backdrop-blur-sm"
+            onClick={handleCancelEmail}
+          />
+
+          {/* Modal Content - Scrollable Container */}
+          <div className="relative z-10 mx-auto w-full max-w-2xl my-8">
+            {/* Venue Card Preview */}
+            <div className="mb-4 rounded-2xl bg-card p-6 shadow-lg">
+              <div className="flex gap-6">
+                <div className="h-32 w-48 flex-shrink-0 rounded-lg bg-muted">
+                  <div className="flex h-full w-full items-center justify-center">
+                    <MapPin className="h-12 w-12 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-serif text-2xl font-semibold text-foreground">
+                    {selectedVenue.name}
+                  </h2>
+                  <p className="mt-1 text-muted-foreground">{selectedVenue.location}</p>
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    A beautiful venue perfect for your special day. Features include elegant spaces and professional service.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedVenue.features?.slice(0, 3).map((feature) => (
+                      <span
+                        key={feature}
+                        className="rounded-full border border-border bg-muted px-3 py-1 text-xs text-muted-foreground"
+                      >
+                        {feature}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal States */}
+            {emailModalState === 'intent' && (
+              <div className="rounded-2xl bg-card p-8 text-center shadow-lg">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20">
+                  <Mail className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-serif text-2xl font-semibold text-foreground">
+                  Do you want to review the draft email?
+                </h3>
+                <p className="mt-3 text-muted-foreground">
+                  We've prepared an email to {selectedVenue.name} with your criteria and questions
+                </p>
+                <div className="mt-8 flex justify-center gap-4">
+                  <Button
+                    onClick={handleSendDirectly}
+                    disabled={isGeneratingEmail}
+                    className="cursor-pointer rounded-full bg-primary px-8 py-3 text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isGeneratingEmail ? 'Generating...' : 'No, send directly'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleReviewDraft}
+                    disabled={isGeneratingEmail}
+                    className="cursor-pointer rounded-full border-primary/30 px-8 py-3 text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Yes, review draft
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {emailModalState === 'draft' && (
+              <div className="rounded-2xl bg-card p-8 shadow-lg">
+                <div className="mb-6 flex items-center justify-between">
+                  <h3 className="font-serif text-xl font-semibold text-foreground">
+                    Review & Edit Email Draft
+                  </h3>
+                  <button onClick={handleCancelEmail} className="text-muted-foreground hover:text-foreground">
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/30 p-4">
+                  <Textarea
+                    value={emailDraft}
+                    onChange={(e) => setEmailDraft(e.target.value)}
+                    className="min-h-[300px] w-full resize-none border-0 bg-transparent text-sm leading-relaxed focus-visible:ring-0"
+                  />
+                </div>
+                <div className="mt-6 flex justify-end gap-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelEmail}
+                    className="rounded-full px-6"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleProceedToSend}
+                    className="rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90"
+                  >
+                    Continue
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {emailModalState === 'send' && (
+              <div className="rounded-2xl bg-card p-8 text-center shadow-lg">
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-secondary/30">
+                  <CheckCircle2 className="h-8 w-8 text-secondary" />
+                </div>
+                <h3 className="font-serif text-2xl font-semibold text-foreground">
+                  Ready to send?
+                </h3>
+                <p className="mt-3 text-muted-foreground">
+                  Your email to {selectedVenue.name} is ready to be sent
+                </p>
+                <div className="mt-8 flex justify-center gap-4">
+                  <Button
+                    onClick={handleSendEmail}
+                    className="rounded-full bg-primary px-8 py-3 text-primary-foreground hover:bg-primary/90"
+                  >
+                    Send
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelEmail}
+                    className="rounded-full px-8 py-3"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Book a Call Modal */}
+      {showCallBookingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
+            onClick={handleCancelCallBooking}
+          />
+          
+          {/* Modal */}
+          <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-card p-8 shadow-xl">
+            <h2 className="mb-6 font-serif text-2xl font-semibold text-foreground">
+              Book a call
+            </h2>
+            
+            {/* Radio Options */}
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setCallBookingMethod('sync')}
+                className={cn(
+                  "w-full rounded-xl border-2 p-4 text-left transition-all",
+                  callBookingMethod === 'sync' 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    callBookingMethod === 'sync' 
+                      ? "border-primary" 
+                      : "border-muted-foreground"
+                  )}>
+                    {callBookingMethod === 'sync' && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Sync my calendar</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Connect your calendar to automatically find available times
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCallBookingMethod('manual')}
+                className={cn(
+                  "w-full rounded-xl border-2 p-4 text-left transition-all",
+                  callBookingMethod === 'manual' 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    callBookingMethod === 'manual' 
+                      ? "border-primary" 
+                      : "border-muted-foreground"
+                  )}>
+                    {callBookingMethod === 'manual' && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Enter availability manually</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Select your preferred times from a calendar grid
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            
+            {/* Buttons */}
+            <div className="mt-8 flex gap-4">
+              <Button
+                variant="outline"
+                onClick={handleCancelCallBooking}
+                className="flex-1 rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmCallBooking}
+                className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Confirm booking
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Book a Visit Modal */}
+      {showVisitBookingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-foreground/20 backdrop-blur-sm"
+            onClick={handleCancelVisitBooking}
+          />
+          
+          {/* Modal */}
+          <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-card p-8 shadow-xl">
+            <h2 className="mb-6 font-serif text-2xl font-semibold text-foreground">
+              Book a visit
+            </h2>
+            
+            {/* Radio Options */}
+            <div className="space-y-4">
+              <button
+                type="button"
+                onClick={() => setVisitBookingMethod('sync')}
+                className={cn(
+                  "w-full rounded-xl border-2 p-4 text-left transition-all",
+                  visitBookingMethod === 'sync' 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    visitBookingMethod === 'sync' 
+                      ? "border-primary" 
+                      : "border-muted-foreground"
+                  )}>
+                    {visitBookingMethod === 'sync' && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Sync my calendar</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Connect your calendar to automatically find available times
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVisitBookingMethod('manual')}
+                className={cn(
+                  "w-full rounded-xl border-2 p-4 text-left transition-all",
+                  visitBookingMethod === 'manual' 
+                    ? "border-primary bg-primary/5" 
+                    : "border-border hover:border-primary/30"
+                )}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={cn(
+                    "mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2",
+                    visitBookingMethod === 'manual' 
+                      ? "border-primary" 
+                      : "border-muted-foreground"
+                  )}>
+                    {visitBookingMethod === 'manual' && (
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Enter availability manually</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Select your preferred times from a calendar grid
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            
+            {/* Buttons */}
+            <div className="mt-8 flex gap-4">
+              <Button
+                variant="outline"
+                onClick={handleCancelVisitBooking}
+                className="flex-1 rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmVisitBooking}
+                className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className="flex-1 px-6 py-8">
+        <div className="mx-auto max-w-6xl">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="font-serif text-3xl font-bold text-foreground">
+              Your Venue Journey
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              Track the status of all your venue inquiries in one place
+            </p>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-foreground">{stats.total}</div>
+                <p className="text-sm text-muted-foreground">Total Venues</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
+                <p className="text-sm text-muted-foreground">In Progress</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+                <p className="text-sm text-muted-foreground">Completed</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-2xl font-bold text-amber-600">{stats.needsAttention}</div>
+                <p className="text-sm text-muted-foreground">Missing Info</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Upcoming Section */}
+          {(upcomingCalls.length > 0 || upcomingVisits.length > 0) && (
+            <div className="mb-8 grid gap-6 lg:grid-cols-2">
+              {upcomingCalls.length > 0 && (
+                <Card className="border-blue-100 bg-blue-50/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 font-serif text-lg">
+                      <Phone className="h-5 w-5 text-blue-600" />
+                      Upcoming Calls
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {upcomingCalls.map((venue) => (
+                      <div
+                        key={venue.id}
+                        className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm"
+                      >
+                        <div>
+                          <p className="font-medium">{venue.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {venue.callDetails?.scheduledDate} at {venue.callDetails?.scheduledTime}
+                          </p>
+                        </div>
+                        <Button size="sm" asChild>
+                          <Link href={`/venues/${venue.id}/call`}>Join Call</Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+              {upcomingVisits.length > 0 && (
+                <Card className="border-purple-100 bg-purple-50/50">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 font-serif text-lg">
+                      <Calendar className="h-5 w-5 text-purple-600" />
+                      Upcoming Visits
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {upcomingVisits.map((venue) => (
+                      <div
+                        key={venue.id}
+                        className="flex items-center justify-between rounded-lg bg-card p-3 shadow-sm"
+                      >
+                        <div>
+                          <p className="font-medium">{venue.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {venue.visitDetails?.scheduledDate} at {venue.visitDetails?.scheduledTime}
+                          </p>
+                        </div>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link href={`/venues/${venue.id}`}>View Details</Link>
+                        </Button>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Venue Selector with Booking Actions */}
+          <Card className="mb-8">
+            <CardContent className="p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1">
+                  <label className="mb-2 block text-sm font-medium text-foreground">
+                    Select a venue to book
+                  </label>
+                  <Select value={selectedVenueForBooking} onValueChange={setSelectedVenueForBooking}>
+                    <SelectTrigger className="w-full sm:max-w-md">
+                      <SelectValue placeholder="Choose a venue..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {state.venues.map((venue) => (
+                        <SelectItem key={venue.id} value={venue.id}>
+                          {venue.name} - {venue.location}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    disabled={!selectedVenueForBooking}
+                    onClick={handleOpenCallBooking}
+                    className="gap-2 rounded-full"
+                  >
+                    <Phone className="h-4 w-4" />
+                    Book a Call
+                  </Button>
+                  <Button
+                    disabled={!selectedVenueForBooking}
+                    onClick={handleOpenVisitBooking}
+                    className="gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    Book a Visit
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Venue List with Tabs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="font-serif text-xl">All Venues</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="mb-6 w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="all">All ({state.venues.length})</TabsTrigger>
+                  {statusGroups.map(({ status, label }) => {
+                    const count = getVenuesByStatus(status).length;
+                    if (count === 0) return null;
+                    return (
+                      <TabsTrigger key={status} value={status}>
+                        {label} ({count})
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+
+                <TabsContent value="all" className="space-y-3">
+                  {state.venues.map((venue) => (
+                    <VenueRow key={venue.id} venue={venue} onAllowContact={handleAllowContact} />
+                  ))}
+                </TabsContent>
+
+                {statusGroups.map(({ status }) => (
+                  <TabsContent key={status} value={status} className="space-y-3">
+                    {getVenuesByStatus(status).map((venue) => (
+                      <VenueRow key={venue.id} venue={venue} onAllowContact={handleAllowContact} />
+                    ))}
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}

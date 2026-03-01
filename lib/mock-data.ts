@@ -154,7 +154,37 @@ export const mockVenues: Venue[] = [
       name: 'David Wilson',
       email: 'events@syonpark.co.uk',
       phone: '+44 1234 567895'
-    }
+    },
+    missingInfoItems: ['Price', 'Catering options', 'Availability'],
+    contactAllowed: false
+  },
+  {
+    id: '7',
+    name: 'Rosewood Gardens',
+    location: 'Napa Valley, CA',
+    imageUrl: '/venues/rosewood-gardens.jpg',
+    type: 'garden',
+    capacity: { min: 80, max: 200 },
+    priceRange: { min: 12000, max: 22000 },
+    status: 'missing_info',
+    matchScore: 88,
+    features: ['Outdoor garden venue', 'Vintage charm', 'Wine country setting'],
+    missingInfoItems: ['Price', 'Capacity', 'Catering options'],
+    contactAllowed: false
+  },
+  {
+    id: '8',
+    name: 'Willow Creek Barn',
+    location: 'Sonoma County, CA',
+    imageUrl: '/venues/willow-creek.jpg',
+    type: 'barn',
+    capacity: { min: 100, max: 250 },
+    priceRange: { min: 10000, max: 18000 },
+    status: 'missing_info',
+    matchScore: 85,
+    features: ['Rustic barn', 'Modern amenities', 'Vineyard views'],
+    missingInfoItems: ['Availability', 'Setup time'],
+    contactAllowed: false
   }
 ];
 

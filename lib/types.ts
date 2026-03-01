@@ -63,6 +63,8 @@ export interface Venue {
     notes: string;
     wouldRecommend: boolean;
   };
+  missingInfoItems?: string[];
+  contactAllowed?: boolean;
 }
 
 export interface Criteria {

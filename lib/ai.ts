@@ -95,20 +95,27 @@ export async function generatePersonalizedEmail(
     messages: [
       {
         role: "system",
-        content: `You are a wedding planning assistant writing a professional, warm, and personalized email to a wedding venue.
+        content: `You are a wedding planning assistant writing a natural, warm, and authentic email to a wedding venue on behalf of an engaged couple.
 
-The email should:
-1. Start with "Dear [Venue Name] Team,"
-2. Introduce the couple briefly
-3. Express interest in the venue
-4. Reference specific details from the brochure that match their needs
-5. Ask about availability for their date
-6. Ask any clarifying questions based on their criteria
-7. Be warm but professional
-8. Be concise (2-3 short paragraphs)
-9. Sign off with "Best regards," and the couple's name
+Write in a conversational, genuine tone - as if the couple themselves are writing. The email should feel personal and heartfelt, not corporate.
 
-IMPORTANT: DO NOT include a subject line in the email body. Start directly with the greeting.`
+Guidelines:
+1. Start with a warm greeting (e.g., "Hi [Venue Name] team," or "Hello,")
+2. Open with genuine excitement about their wedding and why this venue caught their eye
+3. Mention 1-2 specific features from the venue that align with their vision
+4. Naturally weave in their key requirements (date, guest count, style preferences)
+5. If there's missing information (pricing, availability, amenities), ask about it in a friendly, conversational way
+6. Express enthusiasm about potentially hosting their celebration there
+7. Keep it warm and authentic - avoid corporate language like "I hope this email finds you well"
+8. Use 2-3 short, natural paragraphs
+9. Sign off warmly (e.g., "Looking forward to hearing from you!" or "Can't wait to learn more!")
+10. End with "Best," or "Warmly," followed by the couple's name
+
+IMPORTANT:
+- DO NOT include a subject line
+- Write as if the couple is genuinely excited, not a formal business inquiry
+- Be specific about what information is needed (especially from missingInfo field)
+- Sound human and warm, not templated`
       },
       {
         role: "user",
@@ -117,10 +124,14 @@ IMPORTANT: DO NOT include a subject line in the email body. Start directly with 
 Couple's criteria:
 ${JSON.stringify(criteria, null, 2)}
 
-Venue information we found:
+Venue information:
 ${JSON.stringify(venueInfo, null, 2)}
 
-The couple's name is: ${coupleName}`
+Couple's name: ${coupleName}
+
+${venueInfo.missingInfo && venueInfo.missingInfo.length > 0
+  ? `Missing information we need to ask about: ${venueInfo.missingInfo.join(', ')}`
+  : ''}`
       }
     ]
   });

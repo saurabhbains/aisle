@@ -16,6 +16,8 @@ type Action =
   | { type: 'APPROVE_EMAIL' }
   | { type: 'LOAD_STATE'; payload: AppState };
 
+const STATE_VERSION = 2; // Increment when data structure changes
+
 const initialState: AppState = {
   currentStep: 'onboarding',
   criteria: mockCriteria,
@@ -76,6 +78,7 @@ interface AppContextType {
   dispatch: React.Dispatch<Action>;
   getVenueById: (id: string) => Venue | undefined;
   getVenuesByStatus: (status: Venue['status']) => Venue[];
+  updateVenue: (id: string, updates: Partial<Venue>) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -83,9 +86,18 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Load state from localStorage on mount
+  // Load state from localStorage on mount (with version check)
   useEffect(() => {
+    const savedVersion = localStorage.getItem('aisle-app-version');
     const saved = localStorage.getItem('aisle-app-state');
+    
+    // If version mismatch, clear old state and use fresh mock data
+    if (savedVersion !== String(STATE_VERSION)) {
+      localStorage.removeItem('aisle-app-state');
+      localStorage.setItem('aisle-app-version', String(STATE_VERSION));
+      return;
+    }
+    
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -106,8 +118,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const getVenuesByStatus = (status: Venue['status']) => 
     state.venues.filter(v => v.status === status);
 
+  const updateVenue = (id: string, updates: Partial<Venue>) => {
+    const venue = getVenueById(id);
+    if (venue) {
+      dispatch({ type: 'UPDATE_VENUE', payload: { ...venue, ...updates } });
+    }
+  };
+
   return (
-    <AppContext.Provider value={{ state, dispatch, getVenueById, getVenuesByStatus }}>
+    <AppContext.Provider value={{ state, dispatch, getVenueById, getVenuesByStatus, updateVenue }}>
       {children}
     </AppContext.Provider>
   );

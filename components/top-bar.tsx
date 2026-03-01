@@ -41,13 +41,9 @@ export function TopBar({
             </Link>
           </Button>
         )}
-        {title ? (
-          <h1 className="font-serif text-xl font-semibold text-foreground">{title}</h1>
-        ) : (
-          <Link href="/venues/status" className="flex items-center gap-2">
-            <span className="font-serif text-2xl font-bold text-primary">Aisle</span>
-          </Link>
-        )}
+        <Link href="/venues/status" className="flex items-center gap-2">
+          <span className="font-serif text-2xl font-bold text-foreground">Aisle</span>
+        </Link>
       </div>
 
       <nav className="hidden items-center gap-6 md:flex">
@@ -68,15 +64,6 @@ export function TopBar({
           )}
         >
           Criteria
-        </Link>
-        <Link
-          href="/venues/initial"
-          className={cn(
-            'text-sm font-medium transition-colors hover:text-primary',
-            pathname === '/venues/initial' ? 'text-primary' : 'text-muted-foreground'
-          )}
-        >
-          Venues
         </Link>
       </nav>
 
