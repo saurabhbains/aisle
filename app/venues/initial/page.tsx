@@ -24,9 +24,9 @@ export default function InitialVenueListPage() {
       location: venue.location,
       imageUrl: venue.imageUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&h=200&fit=crop',
       criteriaMatches: [
-        ...(venue.capacity ? [`Capacity: ${venue.capacity} guests`] : []),
-        ...(venue.budget ? [`Budget: ${venue.budget}`] : []),
-        ...(venue.amenities ? venue.amenities.slice(0, 2) : [])
+        ...(venue.capacity ? [`Capacity: ${venue.capacity.max} guests`] : []),
+        ...(venue.priceRange ? [`Budget: £${venue.priceRange.min}-${venue.priceRange.max}`] : []),
+        ...(venue.features ? venue.features.slice(0, 2) : [])
       ].filter(Boolean).slice(0, 3) // Max 3 criteria matches
     }));
   }, [state.venues]);
