@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
 
 Extract and structure the following information:
 - availability: Any mentions of dates, seasons, or availability status
+- availabilityMatchesRequirement: Boolean - true if the venue is available when the couple needs it, false if they explicitly say they're NOT available for the requested dates or only available at different times. If not mentioned, set to null.
 - pricing: Venue hire cost, per-person costs, total estimates, what's included
 - capacity: Minimum, maximum, and recommended guest counts
 - catering: Catering options (in-house, external, both), dietary options, notes
@@ -41,6 +42,8 @@ Extract and structure the following information:
 - contactPerson: Name of the contact person
 - contactEmail: Email address
 - contactPhone: Phone number
+
+IMPORTANT: Pay close attention to phrases like "not available when you asked", "only available in [different month]", "unfortunately we're booked", etc. These should result in availabilityMatchesRequirement: false.
 
 Return JSON with an "extractedInfo" object containing all extracted information. Be thorough and extract every detail mentioned.`
         },

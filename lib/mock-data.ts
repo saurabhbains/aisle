@@ -245,7 +245,8 @@ export const statusLabels: Record<string, string> = {
   'visit_completed': 'Visit Completed',
   'shortlisted': 'Shortlisted',
   'rejected': 'Not Proceeding',
-  'missing_info': 'Missing Info'
+  'missing_info': 'Missing Info',
+  'criteria_not_met': 'Criteria Not Met'
 };
 
 export const statusColors: Record<string, { bg: string; text: string }> = {
@@ -256,5 +257,6 @@ export const statusColors: Record<string, { bg: string; text: string }> = {
   'visit_completed': { bg: 'bg-green-100', text: 'text-green-700' },
   'shortlisted': { bg: 'bg-pink-100', text: 'text-pink-700' },
   'rejected': { bg: 'bg-gray-100', text: 'text-gray-500' },
-  'missing_info': { bg: 'bg-orange-100', text: 'text-orange-700' }
+  'missing_info': { bg: 'bg-orange-100', text: 'text-orange-700' },
+  'criteria_not_met': { bg: 'bg-red-100', text: 'text-red-700' }
 };

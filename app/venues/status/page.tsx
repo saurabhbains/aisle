@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  Phone, 
-  Calendar, 
-  CheckCircle2, 
-  Clock, 
+import {
+  Phone,
+  Calendar,
+  CheckCircle2,
+  Clock,
   AlertCircle,
   MapPin,
   Users,
@@ -32,6 +32,7 @@ import { StatusPill } from '@/components/status-pill';
 import { useApp } from '@/lib/context';
 import type { Venue, VenueStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { validateVenueCriteria, detectMissingInfo } from '@/lib/criteria-validator';
 
 const statusGroups: { status: VenueStatus; label: string; icon: React.ElementType }[] = [
   { status: 'awaiting_response', label: 'Awaiting Response', icon: Clock },
@@ -45,20 +46,29 @@ const statusGroups: { status: VenueStatus; label: string; icon: React.ElementTyp
 interface VenueRowProps {
   venue: Venue;
   onAllowContact?: (venueId: string) => void;
-  onUploadResponse?: (venueId: string) => void;
-  onSimulateResponse?: (venueId: string) => void;
+  onAddResponse?: (venueId: string) => void;
+  onRemoveVenue?: (venueId: string) => void;
+  onSendFollowUp?: (venueId: string) => void;
 }
 
-function VenueRow({ venue, onAllowContact, onUploadResponse, onSimulateResponse }: VenueRowProps) {
-  const hasMissingInfo = venue.status === 'missing_info' && venue.missingInfoItems && venue.missingInfoItems.length > 0;
+function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendFollowUp }: VenueRowProps) {
+  const hasMissingInfo = (venue.status === 'missing_info' || venue.contactAllowed) && venue.missingInfoItems && venue.missingInfoItems.length > 0;
+  const hasFailedCriteria = venue.status === 'criteria_not_met' && venue.failedCriteria && venue.failedCriteria.length > 0;
+
+  // Use venue image or fallback to placeholder
+  const venueImage = venue.imageUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&h=200&fit=crop';
 
   return (
     <div
       className="rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-sm"
     >
       <div className="flex items-start gap-4">
-        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-muted">
-          <MapPin className="h-8 w-8 text-muted-foreground" />
+        <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+          <img
+            src={venueImage}
+            alt={venue.name}
+            className="h-full w-full object-cover"
+          />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
@@ -132,6 +142,23 @@ function VenueRow({ venue, onAllowContact, onUploadResponse, onSimulateResponse 
             )}
           </div>
 
+          {/* Failed criteria section */}
+          {hasFailedCriteria && (
+            <div className="mt-3">
+              <p className="mb-2 text-xs font-medium text-red-700">Criteria not met</p>
+              <div className="flex flex-wrap gap-2">
+                {venue.failedCriteria?.map((reason) => (
+                  <span
+                    key={reason}
+                    className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs text-red-700"
+                  >
+                    {reason}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Missing info section and Send Email button */}
           <div className="mt-3">
             {hasMissingInfo && (
@@ -149,7 +176,39 @@ function VenueRow({ venue, onAllowContact, onUploadResponse, onSimulateResponse 
                 </div>
               </>
             )}
-            {!venue.contactAllowed && (
+
+            {/* Criteria not met - show email option and reject option */}
+            {venue.status === 'criteria_not_met' && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddResponse?.(venue.id);
+                  }}
+                  className="rounded-full text-xs"
+                >
+                  Send email anyway
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`Remove ${venue.name} from your list? This will mark it as "Not Proceeding".`)) {
+                      onRemoveVenue?.(venue.id);
+                    }
+                  }}
+                  className="rounded-full text-xs border-red-200 text-red-700 hover:bg-red-50"
+                >
+                  Remove venue
+                </Button>
+              </div>
+            )}
+
+            {/* Normal flow - criteria met or not yet evaluated */}
+            {!venue.contactAllowed && venue.status !== 'criteria_not_met' && (
               <Button
                 size="sm"
                 onClick={(e) => {
@@ -161,33 +220,36 @@ function VenueRow({ venue, onAllowContact, onUploadResponse, onSimulateResponse 
                 Send Email
               </Button>
             )}
-            {venue.contactAllowed && (
+            {venue.contactAllowed && venue.status !== 'criteria_not_met' && (
               <div className="flex flex-col gap-2">
-                <p className="text-xs text-secondary">Email sent - awaiting response</p>
-                <div className="flex gap-2">
+                {!hasMissingInfo && (
+                  <p className="text-xs text-secondary">Email sent - awaiting response</p>
+                )}
+                {hasMissingInfo ? (
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onUploadResponse?.(venue.id);
+                      onSendFollowUp?.(venue.id);
                     }}
                     className="rounded-full text-xs"
                   >
-                    Upload response
+                    Send follow-up email
                   </Button>
+                ) : (
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSimulateResponse?.(venue.id);
+                      onAddResponse?.(venue.id);
                     }}
                     className="rounded-full text-xs"
                   >
-                    Simulate response
+                    Add venue response
                   </Button>
-                </div>
+                )}
               </div>
             )}
           </div>
@@ -215,14 +277,11 @@ export default function StatusDashboardPage() {
   const [callBookingMethod, setCallBookingMethod] = useState<'sync' | 'manual'>('sync');
   const [showVisitBookingModal, setShowVisitBookingModal] = useState(false);
   const [visitBookingMethod, setVisitBookingMethod] = useState<'sync' | 'manual'>('sync');
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedVenueForUpload, setSelectedVenueForUpload] = useState<string | null>(null);
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [selectedVenueForResponse, setSelectedVenueForResponse] = useState<string | null>(null);
+  const [responseText, setResponseText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isProcessingUpload, setIsProcessingUpload] = useState(false);
-  const [showSimulateModal, setShowSimulateModal] = useState(false);
-  const [selectedVenueForSimulate, setSelectedVenueForSimulate] = useState<string | null>(null);
-  const [simulatedResponseText, setSimulatedResponseText] = useState('');
-  const [isProcessingSimulate, setIsProcessingSimulate] = useState(false);
+  const [isProcessingResponse, setIsProcessingResponse] = useState(false);
 
   const selectedVenue = selectedVenueForEmail ? getVenueById(selectedVenueForEmail) : null;
 
@@ -424,38 +483,192 @@ Sarah & John`;
     setShowVisitBookingModal(false);
   };
 
-  const handleUploadResponse = (venueId: string) => {
-    setSelectedVenueForUpload(venueId);
-    setShowUploadModal(true);
+  const handleAddResponse = (venueId: string) => {
+    setSelectedVenueForResponse(venueId);
+    setShowResponseModal(true);
   };
 
-  const handleSimulateResponse = (venueId: string) => {
-    setSelectedVenueForSimulate(venueId);
-    setShowSimulateModal(true);
+  const handleRemoveVenue = (venueId: string) => {
+    updateVenue(venueId, {
+      status: 'rejected'
+    });
   };
 
-  const handleSubmitSimulatedResponse = async () => {
-    if (!simulatedResponseText.trim() || !selectedVenueForSimulate) return;
+  const handleSendFollowUp = async (venueId: string) => {
+    // Validate venue exists
+    const venue = getVenueById(venueId);
+    if (!venue) {
+      alert('Venue not found. Please refresh the page and try again.');
+      return;
+    }
 
-    setIsProcessingSimulate(true);
+    // Validate missing info exists
+    if (!venue.missingInfoItems || venue.missingInfoItems.length === 0) {
+      alert('No missing information to follow up on for this venue.');
+      return;
+    }
+
+    // Confirm with user
+    const confirmed = confirm(
+      `Send a follow-up email to ${venue.name} asking for the following missing information?\n\n${venue.missingInfoItems.map(item => `• ${item}`).join('\n')}`
+    );
+    if (!confirmed) return;
 
     try {
-      console.log('Processing simulated response for venue:', selectedVenueForSimulate);
-      const response = await fetch('/api/simulate-response', {
+      // Generate follow-up email using AI
+      const response = await fetch('/api/generate-followup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          venueId: selectedVenueForSimulate,
-          responseText: simulatedResponseText
+          venueName: venue.name,
+          missingInfo: venue.missingInfoItems,
+          contactName: venue.contact?.name || 'Events Team'
         })
       });
 
+      // Check for network errors
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+
+        if (response.status === 429) {
+          alert('Too many requests. Please wait a moment and try again.');
+          return;
+        }
+
+        if (response.status === 503) {
+          alert('AI service is temporarily unavailable. Please try again later.');
+          return;
+        }
+
+        if (response.status >= 500) {
+          alert(`Server error: ${errorData.error || 'Failed to generate follow-up email'}`);
+          return;
+        }
+
+        alert(`Error: ${errorData.error || 'Failed to generate follow-up email'}`);
+        return;
+      }
+
       const data = await response.json();
-      console.log('Simulate response data:', data);
 
-      if (data.success) {
-        const extractedInfo = data.response.extractedInfo;
+      if (!data.success || !data.emailContent) {
+        alert(data.error || 'Failed to generate follow-up email. Please try again.');
+        return;
+      }
 
+      // Send the email
+      const sendResponse = await fetch('/api/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: 'saurabhbains@berkeley.edu',
+          subject: `[FOLLOW-UP] Additional Information Request - ${venue.name}`,
+          emailBody: data.emailContent
+        })
+      });
+
+      // Check send email response
+      if (!sendResponse.ok) {
+        const sendErrorData = await sendResponse.json().catch(() => ({ error: 'Unknown error' }));
+        alert(`Failed to send email: ${sendErrorData.error || 'Unknown error'}`);
+        return;
+      }
+
+      const sendData = await sendResponse.json();
+
+      if (sendData.success) {
+        alert(
+          `✓ Follow-up email sent successfully!\n\nVenue: ${venue.name}\nRecipient: saurabhbains@berkeley.edu (demo)\n\nThe venue will receive a polite request for the missing information.`
+        );
+      } else {
+        alert(`Failed to send follow-up email: ${sendData.error || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error sending follow-up:', error);
+
+      // Handle specific error types
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        alert('Network error: Unable to connect to the server. Please check your internet connection.');
+      } else if (error.name === 'AbortError') {
+        alert('Request timed out. Please try again.');
+      } else {
+        alert(`Unexpected error: ${error.message || 'Failed to send follow-up email'}`);
+      }
+    }
+  };
+
+  const handleSubmitResponse = async () => {
+    if ((!responseText.trim() && !uploadedFile) || !selectedVenueForResponse) {
+      alert('Please provide either a text response or upload a file');
+      return;
+    }
+
+    setIsProcessingResponse(true);
+
+    try {
+      console.log('Processing venue response for venue:', selectedVenueForResponse);
+
+      // If there's a file, process it first
+      let pdfExtractedInfo = null;
+      if (uploadedFile) {
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        formData.append('venueId', selectedVenueForResponse);
+
+        const pdfResponse = await fetch('/api/parse-pdf', {
+          method: 'POST',
+          body: formData
+        });
+
+        const pdfData = await pdfResponse.json();
+        console.log('PDF parsing response:', pdfData);
+        if (pdfData.success) {
+          pdfExtractedInfo = pdfData.extractedData;
+          console.log('PDF extracted info:', pdfExtractedInfo);
+        }
+      }
+
+      // Process the text response
+      let textExtractedInfo = null;
+      if (responseText.trim()) {
+        const response = await fetch('/api/simulate-response', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            venueId: selectedVenueForResponse,
+            responseText: responseText
+          })
+        });
+
+        const data = await response.json();
+        console.log('Text response data:', data);
+
+        if (data.success) {
+          textExtractedInfo = data.response.extractedInfo;
+        }
+      }
+
+      // Merge information from both sources (PDF and text)
+      // Text response should override PDF where both exist, but we need to be smart about it
+      const extractedInfo = {
+        ...pdfExtractedInfo,
+        ...textExtractedInfo
+      };
+
+      // If PDF had data but text response set fields to undefined/null, restore PDF data
+      if (pdfExtractedInfo) {
+        Object.keys(pdfExtractedInfo).forEach(key => {
+          if (extractedInfo[key] === undefined || extractedInfo[key] === null) {
+            extractedInfo[key] = pdfExtractedInfo[key];
+          }
+        });
+      }
+
+      console.log('Merged extracted info:', extractedInfo);
+      console.log('PDF info:', pdfExtractedInfo);
+      console.log('Text info:', textExtractedInfo);
+
+      if (extractedInfo && Object.keys(extractedInfo).length > 0) {
         // Prepare venue updates with extracted information
         const venueUpdates: Partial<Venue> = {
           missingInfoItems: [],
@@ -491,7 +704,7 @@ Sarah & John`;
         }
 
         // Update contact information
-        const currentVenue = getVenueById(selectedVenueForSimulate);
+        const currentVenue = getVenueById(selectedVenueForResponse);
         if (currentVenue) {
           venueUpdates.contact = {
             name: extractedInfo.contactPerson || currentVenue.contact?.name || 'Events Team',
@@ -500,8 +713,32 @@ Sarah & John`;
           };
         }
 
+        // Apply updates to get the updated venue object for validation
+        const updatedVenue = { ...currentVenue, ...venueUpdates } as Venue;
+
+        // Validate against criteria (pass extractedInfo to check AI-determined availability)
+        const validation = validateVenueCriteria(updatedVenue, state.criteria, extractedInfo);
+
+        // Detect any remaining missing information (pass extractedInfo to check text responses too)
+        const stillMissingInfo = detectMissingInfo(updatedVenue, state.criteria, extractedInfo);
+
+        // Determine final status based on validation and missing info
+        if (!validation.meetsAllCriteria) {
+          venueUpdates.status = 'criteria_not_met';
+          venueUpdates.failedCriteria = validation.failedCriteria;
+          venueUpdates.missingInfoItems = []; // Clear missing info if criteria not met
+        } else if (stillMissingInfo.length > 0) {
+          venueUpdates.status = 'missing_info';
+          venueUpdates.missingInfoItems = stillMissingInfo;
+          venueUpdates.failedCriteria = []; // Clear failed criteria
+        } else {
+          venueUpdates.status = 'shortlisted';
+          venueUpdates.missingInfoItems = [];
+          venueUpdates.failedCriteria = [];
+        }
+
         // Update venue with all extracted data
-        updateVenue(selectedVenueForSimulate, venueUpdates);
+        updateVenue(selectedVenueForResponse, venueUpdates);
 
         console.log('Venue updated with extracted data:', venueUpdates);
         console.log('Extracted information:', extractedInfo);
@@ -546,110 +783,54 @@ Sarah & John`;
         }
 
         if (extractedInfo.contactPerson) {
-          infoSummary += `📧 Contact: ${extractedInfo.contactPerson}`;
+          infoSummary += `📧 Contact: ${extractedInfo.contactPerson}\n`;
+        }
+
+        if (extractedInfo.notes) {
+          infoSummary += `📝 Notes: ${extractedInfo.notes}\n`;
+        }
+
+        // Add validation result
+        infoSummary += `\n`;
+        if (!validation.meetsAllCriteria) {
+          infoSummary += `❌ CRITERIA NOT MET:\n`;
+          validation.failedCriteria.forEach(reason => {
+            infoSummary += `   • ${reason}\n`;
+          });
+          infoSummary += `\nThis venue will be marked as "Criteria Not Met".`;
+        } else if (stillMissingInfo.length > 0) {
+          infoSummary += `⚠️ Still missing information:\n`;
+          stillMissingInfo.forEach(item => {
+            infoSummary += `   • ${item}\n`;
+          });
+          infoSummary += `\nYou can send a follow-up email to request this information.`;
+        } else {
+          infoSummary += `✅ All criteria met! Venue marked as "Shortlisted".`;
         }
 
         alert(infoSummary);
 
         // Close modal and reset
-        setShowSimulateModal(false);
-        setSimulatedResponseText('');
-        setSelectedVenueForSimulate(null);
+        setShowResponseModal(false);
+        setResponseText('');
+        setUploadedFile(null);
+        setSelectedVenueForResponse(null);
       } else {
-        alert('Failed to process response: ' + data.error);
+        alert('No information could be extracted from the response');
       }
     } catch (error) {
-      console.error('Error processing simulated response:', error);
+      console.error('Error processing venue response:', error);
       alert('Failed to process response');
     } finally {
-      setIsProcessingSimulate(false);
+      setIsProcessingResponse(false);
     }
   };
 
-  const handleCancelSimulate = () => {
-    setShowSimulateModal(false);
-    setSimulatedResponseText('');
-    setSelectedVenueForSimulate(null);
-  };
-
-  const handleFileUpload = async () => {
-    if (!uploadedFile || !selectedVenueForUpload) return;
-
-    setIsProcessingUpload(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', uploadedFile);
-      formData.append('venueId', selectedVenueForUpload);
-
-      const response = await fetch('/api/parse-pdf', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        const extractedData = data.extractedData;
-
-        // Prepare venue updates with extracted information
-        const venueUpdates: Partial<Venue> = {
-          missingInfoItems: [],
-          status: 'shortlisted'
-        };
-
-        // Update features if extracted
-        if (extractedData.amenities && Array.isArray(extractedData.amenities)) {
-          venueUpdates.features = extractedData.amenities;
-        }
-
-        // Extract capacity if available
-        if (extractedData.capacity) {
-          const capacityMatch = extractedData.capacity.match(/(\d+)-(\d+)/);
-          if (capacityMatch) {
-            venueUpdates.capacity = {
-              min: parseInt(capacityMatch[1]),
-              max: parseInt(capacityMatch[2])
-            };
-          }
-        }
-
-        // Extract pricing if available
-        if (extractedData.pricing) {
-          const pricingMatch = extractedData.pricing.match(/£([\d,]+)/);
-          if (pricingMatch) {
-            const price = parseInt(pricingMatch[1].replace(/,/g, ''));
-            venueUpdates.priceRange = {
-              min: price,
-              max: price + 5000
-            };
-          }
-        }
-
-        // Update venue
-        updateVenue(selectedVenueForUpload, venueUpdates);
-
-        console.log('File uploaded and venue updated:', venueUpdates);
-
-        alert('✅ Venue information updated successfully from uploaded file!\n\nAll missing information has been extracted and the venue is now ready for review.');
-        setShowUploadModal(false);
-        setUploadedFile(null);
-        setSelectedVenueForUpload(null);
-      } else {
-        alert('Failed to parse file: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Failed to upload file');
-    } finally {
-      setIsProcessingUpload(false);
-    }
-  };
-
-  const handleCancelUpload = () => {
-    setShowUploadModal(false);
+  const handleCancelResponse = () => {
+    setShowResponseModal(false);
+    setResponseText('');
     setUploadedFile(null);
-    setSelectedVenueForUpload(null);
+    setSelectedVenueForResponse(null);
   };
 
   const stats = {
@@ -810,23 +991,40 @@ Sarah & John`;
         </div>
       )}
 
-      {/* Upload Response Modal */}
-      {showUploadModal && (
+      {/* Venue Response Modal - Combined Upload and Text */}
+      {showResponseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={handleCancelUpload} />
-          <div className="relative z-10 mx-auto w-full max-w-lg my-8">
+          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={handleCancelResponse} />
+          <div className="relative z-10 mx-auto w-full max-w-2xl my-8">
             <div className="rounded-2xl bg-card p-8 shadow-xl">
               <h2 className="mb-6 text-center font-serif text-2xl font-semibold text-foreground">
-                Upload Venue Response
+                Add Venue Response
               </h2>
 
               <p className="mb-4 text-center text-sm text-muted-foreground">
-                Upload a PDF brochure or email reply from the venue. We'll extract the missing information automatically.
+                Paste the venue's email response and/or upload attachments (PDF brochures, etc.). Our AI will extract all missing information.
               </p>
 
+              {/* Text Response */}
               <div className="mb-6">
                 <label className="mb-2 block text-sm font-medium text-foreground">
-                  Select file (PDF, TXT, or Email)
+                  Email Response (Optional)
+                </label>
+                <textarea
+                  value={responseText}
+                  onChange={(e) => setResponseText(e.target.value)}
+                  placeholder="Paste the venue's email response here...&#10;&#10;Example:&#10;Hi Sarah & John,&#10;&#10;Thank you for your interest! We're delighted to confirm availability for June 15, 2025. Our venue hire is £8,500 with catering at £95 per guest..."
+                  className="min-h-[200px] w-full resize-none rounded-lg border border-border bg-background p-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {responseText.length} characters
+                </p>
+              </div>
+
+              {/* File Upload */}
+              <div className="mb-6">
+                <label className="mb-2 block text-sm font-medium text-foreground">
+                  Attachments (Optional)
                 </label>
                 <input
                   type="file"
@@ -844,69 +1042,18 @@ Sarah & John`;
               <div className="flex gap-4">
                 <Button
                   variant="outline"
-                  onClick={handleCancelUpload}
+                  onClick={handleCancelResponse}
                   className="flex-1 rounded-full"
-                  disabled={isProcessingUpload}
+                  disabled={isProcessingResponse}
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleFileUpload}
-                  className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                  disabled={!uploadedFile || isProcessingUpload}
-                >
-                  {isProcessingUpload ? 'Processing...' : 'Upload & Extract'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Simulate Response Modal */}
-      {showSimulateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={handleCancelSimulate} />
-          <div className="relative z-10 mx-auto w-full max-w-2xl my-8">
-            <div className="rounded-2xl bg-card p-8 shadow-xl">
-              <h2 className="mb-6 text-center font-serif text-2xl font-semibold text-foreground">
-                Paste Venue Response
-              </h2>
-
-              <p className="mb-4 text-center text-sm text-muted-foreground">
-                Paste the venue's email response below. Our AI will automatically extract all the missing information (availability, pricing, catering options, etc.).
-              </p>
-
-              <div className="mb-6">
-                <label className="mb-2 block text-sm font-medium text-foreground">
-                  Venue Email Response
-                </label>
-                <textarea
-                  value={simulatedResponseText}
-                  onChange={(e) => setSimulatedResponseText(e.target.value)}
-                  placeholder="Paste the venue's email response here...&#10;&#10;Example:&#10;Hi Sarah & John,&#10;&#10;Thank you for your interest in our venue! We're delighted to confirm that we have availability for June 15, 2025. Our venue hire is £8,500 with catering at £95 per guest..."
-                  className="min-h-[300px] w-full resize-none rounded-lg border border-border bg-background p-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {simulatedResponseText.length} characters
-                </p>
-              </div>
-
-              <div className="flex gap-4">
-                <Button
-                  variant="outline"
-                  onClick={handleCancelSimulate}
-                  className="flex-1 rounded-full"
-                  disabled={isProcessingSimulate}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSubmitSimulatedResponse}
-                  disabled={!simulatedResponseText.trim() || isProcessingSimulate}
+                  onClick={handleSubmitResponse}
+                  disabled={(!responseText.trim() && !uploadedFile) || isProcessingResponse}
                   className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  {isProcessingSimulate ? 'Sending...' : 'Send Email'}
+                  {isProcessingResponse ? 'Processing...' : 'Extract Information'}
                 </Button>
               </div>
             </div>
@@ -1282,8 +1429,9 @@ Sarah & John`;
                       key={venue.id}
                       venue={venue}
                       onAllowContact={handleAllowContact}
-                      onUploadResponse={handleUploadResponse}
-                      onSimulateResponse={handleSimulateResponse}
+                      onAddResponse={handleAddResponse}
+                      onRemoveVenue={handleRemoveVenue}
+                      onSendFollowUp={handleSendFollowUp}
                     />
                   ))}
                 </TabsContent>
@@ -1295,8 +1443,9 @@ Sarah & John`;
                       key={venue.id}
                       venue={venue}
                       onAllowContact={handleAllowContact}
-                      onUploadResponse={handleUploadResponse}
-                      onSimulateResponse={handleSimulateResponse}
+                      onAddResponse={handleAddResponse}
+                      onRemoveVenue={handleRemoveVenue}
+                      onSendFollowUp={handleSendFollowUp}
                     />
                     ))}
                   </TabsContent>

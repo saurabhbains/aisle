@@ -1,4 +1,4 @@
-export type VenueStatus = 
+export type VenueStatus =
   | 'awaiting_response'
   | 'call_scheduled'
   | 'call_completed'
@@ -6,7 +6,8 @@ export type VenueStatus =
   | 'visit_completed'
   | 'shortlisted'
   | 'rejected'
-  | 'missing_info';
+  | 'missing_info'
+  | 'criteria_not_met';
 
 export type VenueType = 'country_estate' | 'barn' | 'hotel' | 'garden' | 'castle' | 'vineyard';
 
@@ -65,6 +66,7 @@ export interface Venue {
   };
   missingInfoItems?: string[];
   contactAllowed?: boolean;
+  failedCriteria?: string[];
 }
 
 export interface Criteria {
