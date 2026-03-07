@@ -16,7 +16,8 @@ import {
   Mail,
   X,
   Share2,
-  Loader2
+  Loader2,
+  Pencil
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +57,14 @@ interface VenueRowProps {
 function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendFollowUp }: VenueRowProps) {
   const hasMissingInfo = (venue.status === 'missing_info' || venue.contactAllowed) && venue.missingInfoItems && venue.missingInfoItems.length > 0;
   const hasFailedCriteria = venue.status === 'criteria_not_met' && venue.failedCriteria && venue.failedCriteria.length > 0;
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailValue, setEmailValue] = useState(venue.contact?.email || '');
+  const { updateVenue } = useApp();
+
+  const handleSaveEmail = () => {
+    updateVenue(venue.id, { contact: { ...venue.contact!, email: emailValue } });
+    setEditingEmail(false);
+  };
 
   // Use venue image or fallback to placeholder
   const venueImage = venue.imageUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200&h=200&fit=crop';
@@ -140,10 +149,30 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
                     <span className="font-medium">Contact: {venue.contact.name}</span>
                   </div>
                 )}
-                {venue.contact.email && (
+                {(venue.contact.email || editingEmail) && (
                   <div className="flex items-center gap-1.5">
-                    <Mail className="h-3 w-3" />
-                    <span>{venue.contact.email}</span>
+                    <Mail className="h-3 w-3 flex-shrink-0" />
+                    {editingEmail ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="email"
+                          value={emailValue}
+                          onChange={(e) => setEmailValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleSaveEmail(); if (e.key === 'Escape') setEditingEmail(false); }}
+                          className="rounded border border-primary/30 bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+                          autoFocus
+                        />
+                        <button onClick={handleSaveEmail} className="text-xs text-primary hover:underline">Save</button>
+                        <button onClick={() => setEditingEmail(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <span>{venue.contact.email}</span>
+                        <button onClick={() => { setEmailValue(venue.contact?.email || ''); setEditingEmail(true); }} className="text-muted-foreground/50 hover:text-primary">
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
