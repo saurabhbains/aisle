@@ -1,331 +1,175 @@
-# Aisle - AI-Powered Wedding Planning Assistant
+# Aisle — AI-Powered Wedding Venue Search
 
-An AI agent that automates the wedding venue and catering discovery process, saving couples 20+ hours of repetitive research and communication.
+**Aisle** is an AI assistant that takes the pain out of finding a wedding venue. Instead of spending weeks emailing dozens of venues, chasing PDFs, and tracking spreadsheets, Aisle does it all for you — from discovering venues to reading their replies and keeping your dashboard up to date.
 
-## Project Overview
-
-Aisle is an AI-powered platform that helps couples efficiently find and evaluate wedding venues and caterers by:
-- Capturing wedding criteria through natural conversation
-- Automatically discovering and filtering hundreds of potential venues
-- Handling email communication with vendors on your behalf
-- Extracting and organizing information from PDFs and brochures
-- Creating a consolidated dashboard for decision-making
-- Scheduling venue viewings automatically
-
-**Read the full vision:** [PRD.md](./PRD.md)
+Live at **[www.aisle-weddings.com](https://www.aisle-weddings.com)**
 
 ---
 
-## Getting Started for Team Members
+## The Problem
+
+Finding a wedding venue is one of the most time-consuming parts of wedding planning:
+
+- You have to contact 50–100+ venues just to get basic pricing information
+- Every venue sends a 10–20 page PDF brochure that you have to read manually
+- You ask the same questions over and over across dozens of email threads
+- There's no central place to track what you've asked, what they've said, and what's still missing
+- Most couples spend **20+ hours** on venue research alone
+
+Existing platforms like Hitched and Bridebook are great for discovery but do nothing to automate the back-and-forth. Wedding planners solve the problem but cost thousands of pounds. Aisle sits in the middle — the intelligence of a wedding planner at a fraction of the cost.
+
+---
+
+## What Aisle Does
+
+### 1. Capture Your Criteria
+Tell Aisle what you're looking for — by typing, talking, or uploading inspiration images. Aisle automatically organises your input into:
+- **Must-haves** — deal-breakers like location, guest count, budget, and date
+- **Nice-to-haves** — preferences like outdoor space, rustic aesthetic, or on-site catering
+- **Vibe** — if you upload Pinterest screenshots, Aisle analyses them and extracts aesthetic keywords to search for venues with a similar feel
+
+### 2. Find Venues
+Based on your criteria, Aisle searches for up to 20 matching venues — filtering by must-haves and ranking by how many nice-to-haves each venue satisfies. The best overall matches appear at the top.
+
+### 3. Email Venues Automatically
+Aisle generates a personalised email to each venue on your behalf. You review and approve it, then send. Emails are sent from `noreply@aisle-weddings.com` with a reply-to of `reply@aisle-weddings.com` so all venue responses are captured automatically.
+
+### 4. Parse Replies and PDFs
+When a venue replies — whether with plain text or a PDF brochure attached — Aisle reads it using GPT-4o and automatically extracts:
+- Pricing
+- Availability
+- Capacity
+- Catering options
+- Accommodation
+- Contact details
+
+The dashboard updates immediately. Missing information tags disappear as answers come in.
+
+### 5. Track Everything on Your Dashboard
+Your dashboard shows all venues in one place with:
+- Status (Awaiting Response, Missing Info, Shortlisted, etc.)
+- Match score based on your criteria
+- A green "Replied" tag showing how many replies have been received — click it to read the full reply history and AI summaries
+- Missing information still needed
+- Editable contact emails per venue
+
+### 6. Share Your List
+Send your shortlist of venues to anyone — a partner, family member, or wedding planner — with one click. They receive a nicely formatted email with venue names and website links.
+
+---
+
+## Key Features
+
+| Feature | Description |
+|---------|-------------|
+| Voice input | Dictate your requirements — transcript auto-parses into criteria |
+| Image vibe analysis | Upload Pinterest screenshots → AI extracts aesthetic keywords |
+| Smart ranking | Must-haves filter venues; nice-to-haves sort them |
+| Auto email parsing | Venue replies update the dashboard automatically |
+| PDF parsing | Attached brochures are read and extracted by GPT-4o |
+| Email threading | Follow-up emails reply on the same thread as the venue's original response |
+| Full reply history | Every reply stored and viewable in a popup |
+| Share list | Email your venue list to anyone |
+| Editable contact emails | Manually update venue email addresses from the dashboard |
+| Per-user data | Everything tied to your account — log in from any device |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Next.js 16, Tailwind CSS, TypeScript |
+| Auth & Database | Supabase (PostgreSQL + Auth) |
+| AI | OpenAI GPT-4o (venue search, email parsing, image analysis, PDF extraction) |
+| Email | Resend (sending + inbound webhooks) |
+| Hosting | Vercel |
+| Domain | Cloudflare + aisle-weddings.com |
+
+---
+
+## Getting Started (Local Development)
 
 ### Prerequisites
+- Node.js 18+
+- A Supabase project
+- OpenAI API key
+- Resend API key
 
-1. **Git** - For version control
-2. **Claude Code CLI** - Our primary development tool
-3. **GitHub Account** - With access to this repository
+### Setup
 
-### Step 1: Install Claude Code
-
-If you don't have Claude Code installed yet:
-
-**MacOS/Linux:**
-```bash
-curl -fsSL https://claude.ai/install.sh | sh
-```
-
-**Or using Homebrew:**
-```bash
-brew install anthropics/claude/claude
-```
-
-**Verify installation:**
-```bash
-claude --version
-```
-
-### Step 2: Authenticate Claude Code
-
-```bash
-claude auth login
-```
-
-This will open your browser to authenticate with your Claude account.
-
-### Step 3: Clone the Repository
-
-**Using SSH (Recommended):**
-```bash
-git clone git@github.com:saurabhbains/aisle.git
-cd aisle
-```
-
-**Using HTTPS:**
 ```bash
 git clone https://github.com/saurabhbains/aisle.git
 cd aisle
+npm install
 ```
 
-### Step 4: Start Claude Code in the Project
+Create a `.env.local` file:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+SUPABASE_SECRET_KEY=your_supabase_secret_key
+OPENAI_API_KEY=your_openai_key
+RESEND_API_KEY=your_resend_key
+EMAIL_FROM=noreply@yourdomain.com
+```
+
+Run the Supabase SQL setup:
+
+```sql
+create table public.user_criteria (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  criteria jsonb not null default '[]',
+  updated_at timestamp with time zone default now()
+);
+
+create table public.user_venues (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  venues jsonb not null default '[]',
+  updated_at timestamp with time zone default now()
+);
+
+alter table public.user_criteria enable row level security;
+alter table public.user_venues enable row level security;
+
+alter table public.user_criteria add constraint user_criteria_user_id_key unique (user_id);
+alter table public.user_venues add constraint user_venues_user_id_key unique (user_id);
+
+create policy "Users can manage their own criteria" on public.user_criteria for all using (auth.uid() = user_id);
+create policy "Users can manage their own venues" on public.user_venues for all using (auth.uid() = user_id);
+```
+
+Start the dev server:
 
 ```bash
-cd aisle
-claude
-```
-
-This will start an interactive session with Claude in the context of the project directory.
-
-### Step 5: Tell Claude to Read the PRD
-
-Once Claude Code is running, you can type:
-
-```
-Read the PRD.md file and familiarize yourself with the project. This is a wedding planning AI assistant we're building.
-```
-
-Claude will read the entire PRD and understand the project context.
-
----
-
-## Alternative: Using Claude Desktop App
-
-If you prefer the desktop app over the CLI:
-
-1. **Download Claude Desktop App** from https://claude.ai/download
-2. **Open the app** and switch to the **"Code"** tab
-3. **Select folder:** Click "Select folder" and choose the `aisle` directory
-4. **Start working:** Ask Claude to read the PRD and start building
-
----
-
-## Project Structure
-
-```
-aisle/
-├── PRD.md                 # Product Requirements Document
-├── README.md             # This file
-├── docs/                 # Additional documentation (coming soon)
-├── src/                  # Source code (coming soon)
-└── tests/                # Test files (coming soon)
+npm run dev
 ```
 
 ---
 
-## Development Workflow
+## Roadmap
 
-### Daily Workflow
-
-1. **Pull latest changes:**
-   ```bash
-   git pull origin main
-   ```
-
-2. **Create a branch for your work:**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-3. **Start Claude Code:**
-   ```bash
-   claude
-   ```
-
-4. **Work on your feature** with Claude's assistance
-
-5. **Commit your changes:**
-   ```bash
-   git add .
-   git commit -m "Description of changes"
-   ```
-
-6. **Push your branch:**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-7. **Create a Pull Request** on GitHub for review
-
-### Working with Claude Code
-
-**Best Practices:**
-
-- **Be specific:** Tell Claude exactly what you want to build
-- **Reference the PRD:** When working on features, reference specific sections
-  - Example: "Let's implement the criteria capture feature described in section 6.1 of the PRD"
-- **Review changes:** Always review what Claude creates before committing
-- **Ask questions:** If anything is unclear, ask Claude to explain
-
-**Example Commands:**
-
-```
-"Read the PRD section on email communication and help me design the email agent"
-
-"Create the basic project structure for a Python backend with the components mentioned in the PRD"
-
-"Help me implement the PDF parsing pipeline described in the technical architecture"
-
-"Write unit tests for the criteria capture module"
-```
+- [x] Voice + text + image criteria capture
+- [x] AI venue discovery with smart ranking
+- [x] Automated email sending
+- [x] Inbound email parsing (text + PDF)
+- [x] Full reply history per venue
+- [x] Email threading (replies stay on same thread)
+- [x] Share venue list
+- [x] Google + email authentication
+- [x] Per-user data persistence
+- [ ] Joint account for couples
+- [ ] Google Calendar integration
+- [ ] Per-venue notes and transcript upload
+- [ ] Side-by-side venue comparison
+- [ ] Auto call recording via Twilio
+- [ ] Payment/subscription
 
 ---
 
-## Communication & Collaboration
+## Built By
 
-### Coordination
-
-- **Before starting work:** Check with the team on Slack/WhatsApp about what you're working on
-- **Avoid conflicts:** Don't work on the same files simultaneously
-- **Communicate blockers:** If you're stuck, share in the team chat
-
-### Code Review
-
-- All code changes should be reviewed by at least one other team member
-- Create descriptive pull requests with context
-- Link to relevant PRD sections in your PR description
-
-### Git Commit Guidelines
-
-**Good commit messages:**
-```
-Add criteria capture voice input component
-Implement PDF parsing for venue brochures
-Fix email template generation bug
-Update PRD with technical decisions
-```
-
-**Format:**
-```
-Brief description of change
-
-Longer explanation if needed, referencing PRD sections or issues.
-
-🤖 Generated with Claude Code
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-```
-
----
-
-## Tech Stack (Preliminary)
-
-Based on the PRD, we're considering:
-
-**Frontend:**
-- React/Next.js
-- Tailwind CSS for styling
-- Real-time updates
-
-**Backend:**
-- Python or Node.js
-- PostgreSQL for data storage
-- Redis for caching/queues
-
-**AI/ML:**
-- OpenAI GPT-4 or Anthropic Claude
-- LangChain for orchestration
-- Custom PDF extraction pipeline
-
-**Infrastructure:**
-- AWS/Vercel for hosting
-- S3 for document storage
-
-*Note: Final decisions will be made collaboratively*
-
----
-
-## Frequently Asked Questions
-
-### Can multiple people use Claude Code on this project?
-
-Yes! Each team member runs Claude Code on their own machine. You coordinate through Git:
-- Everyone works on their own local copy
-- Commit and push changes to GitHub
-- Pull others' changes to stay in sync
-
-### Do I need Claude Pro to use Claude Code?
-
-Yes, Claude Code requires a Claude Pro subscription.
-
-### Can I use Claude Desktop App instead of the CLI?
-
-Yes! Both work. The CLI is more powerful for terminal operations, but the desktop app's Code mode is great for development too.
-
-### What if I'm not comfortable with Git?
-
-That's okay! Here are the essential commands you need:
-
-```bash
-# Get latest changes
-git pull origin main
-
-# See what you've changed
-git status
-
-# Add your changes
-git add .
-
-# Commit your changes
-git commit -m "Your message here"
-
-# Push to GitHub
-git push origin your-branch-name
-```
-
-Ask Claude Code for help with Git commands - it's great at explaining them!
-
-### How do we avoid merge conflicts?
-
-1. Pull latest changes before starting work: `git pull origin main`
-2. Work on different files when possible
-3. Communicate what you're working on
-4. Commit and push frequently
-5. Keep pull requests small and focused
-
----
-
-## Quick Start Checklist
-
-- [ ] Install Claude Code CLI or Desktop App
-- [ ] Authenticate with Claude
-- [ ] Clone the repository
-- [ ] Read the PRD.md file
-- [ ] Set up Git with your name and email:
-  ```bash
-  git config --global user.name "Your Name"
-  git config --global user.email "your.email@example.com"
-  ```
-- [ ] Create a test branch and make your first commit
-- [ ] Join the team communication channel
-- [ ] Attend the kickoff meeting
-
----
-
-## Resources
-
-- **Full PRD:** [PRD.md](./PRD.md)
-- **GitHub Repository:** https://github.com/saurabhbains/aisle
-- **Claude Code Docs:** https://docs.anthropic.com/claude/docs/claude-code
-- **Team Chat:** [Add your Slack/Discord/WhatsApp link]
-
----
-
-## Need Help?
-
-- **For technical issues:** Ask in the team chat
-- **For Git questions:** Ask Claude Code or check [Git Basics](https://git-scm.com/book/en/v2/Getting-Started-Git-Basics)
-- **For Claude Code issues:** Check the [official documentation](https://docs.anthropic.com/claude/docs/claude-code)
-
----
-
-## License
-
-*To be determined*
-
----
-
-## Team
-
-- Saurabh Bains - [@saurabhbains](https://github.com/saurabhbains)
-- [Add other team members]
-
----
-
-**Let's build something amazing! 🚀**
+Saurabh Bains — [@saurabhbains](https://github.com/saurabhbains)
