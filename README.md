@@ -190,7 +190,6 @@ npm run dev
 - [x] Per-venue notes and transcript upload
 - [ ] Joint account for couples
 - [ ] Google Calendar integration
-- [ ] Per-venue notes and transcript upload
 - [ ] Side-by-side venue comparison
 - [ ] Auto call recording via Twilio
 - [ ] Payment/subscription
