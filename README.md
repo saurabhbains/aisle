@@ -8,15 +8,18 @@ Live at **[www.aisle-weddings.com](https://www.aisle-weddings.com)**
 
 ## The Problem
 
-Finding a wedding venue is one of the most time-consuming parts of wedding planning:
+**£1.9 billion of productive time is wasted every year** on copy-paste emails and unanswered inboxes.
+
+There are **265,000 weddings in the UK every year**. The average couple spends **528 hours** planning — 13 full working weeks — with a huge chunk of that time going on venue research alone:
 
 - You have to contact 50–100+ venues just to get basic pricing information
-- Every venue sends a 10–20 page PDF brochure that you have to read manually
+- Every venue sends a 10–20 page PDF brochure you have to read manually
 - You ask the same questions over and over across dozens of email threads
 - There's no central place to track what you've asked, what they've said, and what's still missing
-- Most couples spend **20+ hours** on venue research alone
 
-Existing platforms like Hitched and Bridebook are great for discovery but do nothing to automate the back-and-forth. Wedding planners solve the problem but cost thousands of pounds. Aisle sits in the middle — the intelligence of a wedding planner at a fraction of the cost.
+The UK wedding industry is worth **£14.7 billion**. It's the second biggest purchase most couples ever make — yet the process of finding a venue is still completely manual.
+
+Existing platforms like Hitched and Bridebook are great for discovery but do nothing to automate the back-and-forth. Wedding planners solve the problem but cost thousands of pounds. Aisle sits in the middle — the intelligence of a wedding planner, without the price tag.
 
 ---
 
@@ -72,6 +75,28 @@ Send your shortlist of venues to anyone — a partner, family member, or wedding
 | Share list | Email your venue list to anyone |
 | Editable contact emails | Manually update venue email addresses from the dashboard |
 | Per-user data | Everything tied to your account — log in from any device |
+
+---
+
+## Market Opportunity
+
+| | |
+|--|--|
+| **UK wedding industry** | £14.7B |
+| **Global wedding industry** | $650B+ |
+| **UK weddings per year** | 265,000 |
+| **Average planning time** | 528 hours per couple |
+| **Productive time wasted annually** | £1.9B |
+
+Aisle's beachhead is the UK wedding market. The same model extends to real estate, events, and hospitality — a further **$3 trillion+** global opportunity.
+
+**Why now:** No AI-native competitor exists in this space. Hitched and Bridebook solve discovery. Nobody solves the communication, parsing, and coordination layer. That's the gap Aisle fills.
+
+**Business model:**
+- Couples pay **£19/month** (average 5-month subscription = £95 LTV)
+- Venues pay **£199/month** for higher-intent leads than Hitched
+- Vendors pay **£79/month**
+- Target ARR by Year 3: **£3.3M**
 
 ---
 
