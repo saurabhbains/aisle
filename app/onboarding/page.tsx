@@ -259,7 +259,7 @@ export default function OnboardingPage() {
                 value={textInput}
                 onChange={(e) => handleTextChange(e.target.value)}
                 placeholder="Describe your wedding — location, guest count, budget, date, vibe..."
-                className="h-40 w-full resize-none rounded-xl bg-[#FDF8F3] p-4 pr-14 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                className="h-40 w-full resize-none rounded-xl bg-white p-4 pr-14 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 border border-[#E8E0D8]"
               />
               <button
                 onClick={handleToggleRecording}
