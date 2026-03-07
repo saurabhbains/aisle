@@ -161,6 +161,17 @@ Return JSON with these fields (use null if not mentioned):
           receivedAt: new Date().toISOString(),
           messageId,
         },
+        replies: [
+          ...(v.replies || []),
+          {
+            from: fromEmail,
+            subject,
+            summary: extracted.summary,
+            body: fullContent,
+            receivedAt: new Date().toISOString(),
+            messageId,
+          }
+        ],
         ...(extracted.pricing && {
           priceRange: {
             min: parseInt(extracted.pricing.replace(/[^0-9]/g, '')) || v.priceRange?.min || 0,

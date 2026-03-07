@@ -76,6 +76,14 @@ export interface Venue {
     receivedAt: string;
     messageId?: string;
   };
+  replies?: {
+    from: string;
+    subject: string;
+    summary: string;
+    body?: string;
+    receivedAt: string;
+    messageId?: string;
+  }[];
 }
 
 export interface Criteria {
