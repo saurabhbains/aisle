@@ -74,6 +74,7 @@ Send your shortlist of venues to anyone — a partner, family member, or wedding
 | Full reply history | Every reply stored and viewable in a popup |
 | Share list | Email your venue list to anyone |
 | Editable contact emails | Manually update venue email addresses from the dashboard |
+| Notes & transcripts | Per-venue notes section — paste call transcripts, observations, anything |
 | Per-user data | Everything tied to your account — log in from any device |
 
 ---
@@ -186,6 +187,7 @@ npm run dev
 - [x] Share venue list
 - [x] Google + email authentication
 - [x] Per-user data persistence
+- [x] Per-venue notes and transcript upload
 - [ ] Joint account for couples
 - [ ] Google Calendar integration
 - [ ] Per-venue notes and transcript upload
