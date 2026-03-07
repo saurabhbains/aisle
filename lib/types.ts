@@ -68,6 +68,7 @@ export interface Venue {
   missingInfoItems?: string[];
   contactAllowed?: boolean;
   failedCriteria?: string[];
+  notes?: string;
   lastReply?: {
     from: string;
     subject: string;

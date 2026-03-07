@@ -40,6 +40,8 @@ export default function VenueDetailPage({ params }: VenueDetailPageProps) {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [criteriaChanged, setCriteriaChanged] = useState(false);
+  const [notes, setNotes] = useState(venue?.notes || '');
+  const [notesSaved, setNotesSaved] = useState(false);
 
   // Call booking handlers
   const handleOpenCallBooking = () => {
@@ -575,6 +577,30 @@ export default function VenueDetailPage({ params }: VenueDetailPageProps) {
               </CardContent>
             </Card>
           )}
+
+          {/* Notes */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="font-serif text-lg">Notes & Transcript</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <textarea
+                value={notes}
+                onChange={(e) => { setNotes(e.target.value); setNotesSaved(false); }}
+                placeholder="Add your own notes, call transcript, or observations about this venue..."
+                className="h-40 w-full resize-none rounded-xl bg-muted/30 p-4 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Paste call transcripts, brochure notes, or anything useful.</p>
+                <button
+                  onClick={() => { updateVenue(id, { notes }); setNotesSaved(true); }}
+                  className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  {notesSaved ? 'Saved' : 'Save notes'}
+                </button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-4">
