@@ -31,7 +31,7 @@ export default function OnboardingPage() {
   const [vibeKeywords, setVibeKeywords] = useState<string[]>([]);
   const [vibeSummary, setVibeSummary] = useState('');
   const parseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const parseCriteriaRef = useRef<(text: string) => Promise<void>>();
+  const parseCriteriaRef = useRef<((text: string) => Promise<void>) | undefined>(undefined);
 
   const hasInput = textInput.trim().length > 0 || uploadedImages.length > 0;
   const hasCriteria = parsed !== null || vibeKeywords.length > 0;
