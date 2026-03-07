@@ -98,23 +98,38 @@ Return JSON with these fields (use null if not mentioned):
       if (v.id !== matchedVenueId) return v;
       return {
         ...v,
-        status: 'awaiting_response',
         lastReply: {
           from: fromEmail,
           subject,
           summary: extracted.summary,
           receivedAt: new Date().toISOString(),
         },
-        ...(extracted.pricing && { priceRange: { min: 0, max: 0, text: extracted.pricing } }),
+        ...(extracted.pricing && {
+          priceRange: {
+            min: parseInt(extracted.pricing.replace(/[^0-9]/g, '')) || v.priceRange?.min || 0,
+            max: parseInt(extracted.pricing.replace(/[^0-9]/g, '')) || v.priceRange?.max || 0,
+          }
+        }),
         ...(extracted.capacity && { capacity: { min: Math.floor(extracted.capacity * 0.5), max: extracted.capacity } }),
         ...(extracted.contactName && {
           contact: { ...v.contact, name: extracted.contactName, phone: extracted.contactPhone || v.contact?.phone || '' }
         }),
-        missingInfoItems: (v.missingInfoItems || []).filter(
-          (item: string) => !extracted.missingInfoResolved?.some(
-            (resolved: string) => item.toLowerCase().includes(resolved.toLowerCase())
-          )
-        ),
+        missingInfoItems: (() => {
+          const remaining = (v.missingInfoItems || []).filter(
+            (item: string) => !extracted.missingInfoResolved?.some(
+              (resolved: string) => item.toLowerCase().includes(resolved.toLowerCase())
+            )
+          );
+          return remaining;
+        })(),
+        status: (() => {
+          const remaining = (v.missingInfoItems || []).filter(
+            (item: string) => !extracted.missingInfoResolved?.some(
+              (resolved: string) => item.toLowerCase().includes(resolved.toLowerCase())
+            )
+          );
+          return remaining.length === 0 ? 'shortlisted' : 'missing_info';
+        })(),
       };
     });
 
