@@ -634,14 +634,15 @@ Sarah & John`;
         return;
       }
 
-      // Send the email
+      // Send the email — reply on same thread if we have a messageId
       const sendResponse = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: 'saurabhbains@berkeley.edu',
-          subject: `[FOLLOW-UP] Additional Information Request - ${venue.name}`,
-          emailBody: data.emailContent
+          to: venue.contact?.email || 'saurabhbains@berkeley.edu',
+          subject: `Additional Information Request - ${venue.name}`,
+          emailBody: data.emailContent,
+          inReplyTo: venue.lastReply?.messageId || undefined,
         })
       });
 

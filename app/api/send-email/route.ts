@@ -4,7 +4,7 @@ import { sendVenueEmail } from '@/lib/email';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { to, subject, emailBody, from } = body;
+    const { to, subject, emailBody, from, inReplyTo } = body;
 
     if (!to || !subject || !emailBody) {
       return NextResponse.json(
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await sendVenueEmail(to, subject, emailBody, from);
+    const result = await sendVenueEmail(to, subject, emailBody, from, inReplyTo);
 
     return NextResponse.json({
       success: true,

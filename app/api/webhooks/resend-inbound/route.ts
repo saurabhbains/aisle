@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
     const fromEmail = emailData.from?.replace(/.*<(.+)>/, '$1').trim() || emailData.from;
     const subject = emailData.subject || '';
     const emailText = emailData.text || emailData.html?.replace(/<[^>]*>/g, ' ') || '';
+    // Extract Message-ID for threading follow-up replies
+    const messageId = emailData.headers?.find((h: any) => h.name?.toLowerCase() === 'message-id')?.value
+      || emailData.email_id
+      || null;
 
     console.log(`Processing reply from: ${fromEmail}`);
     console.log(`Subject: ${subject}`);
@@ -155,6 +159,7 @@ Return JSON with these fields (use null if not mentioned):
           summary: extracted.summary,
           body: fullContent,
           receivedAt: new Date().toISOString(),
+          messageId,
         },
         ...(extracted.pricing && {
           priceRange: {
