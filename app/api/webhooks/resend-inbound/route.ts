@@ -26,8 +26,59 @@ export async function POST(request: NextRequest) {
     console.log(`Processing reply from: ${fromEmail}`);
     console.log(`Subject: ${subject}`);
 
-    if (!emailText.trim()) {
-      return NextResponse.json({ success: true, message: 'No email text to process' });
+    // Extract text from any PDF attachments
+    let pdfText = '';
+    const attachments = emailData.attachments || [];
+    for (const attachment of attachments) {
+      if (attachment.content_type?.includes('pdf') || attachment.filename?.endsWith('.pdf')) {
+        console.log(`Processing PDF attachment: ${attachment.filename}`);
+        try {
+          // Download PDF from Resend
+          let pdfBuffer: ArrayBuffer | null = null;
+          if (attachment.content) {
+            pdfBuffer = Buffer.from(attachment.content, 'base64').buffer;
+          } else if (attachment.download_url) {
+            const res = await fetch(attachment.download_url, {
+              headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` }
+            });
+            pdfBuffer = await res.arrayBuffer();
+          }
+
+          if (pdfBuffer) {
+            // Send PDF to GPT-4o as base64 for text extraction
+            const base64Pdf = Buffer.from(pdfBuffer).toString('base64');
+            const pdfCompletion = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [
+                {
+                  role: 'user',
+                  content: [
+                    {
+                      type: 'text',
+                      text: 'This is a PDF brochure from a wedding venue. Extract all useful information: pricing, capacity, availability, amenities, catering, accommodation, contact details. Return as plain text.'
+                    },
+                    {
+                      type: 'image_url',
+                      image_url: { url: `data:application/pdf;base64,${base64Pdf}` }
+                    }
+                  ]
+                }
+              ],
+              max_tokens: 1000,
+            });
+            pdfText += '\n\nFrom PDF brochure:\n' + (pdfCompletion.choices[0].message.content || '');
+            console.log('Extracted PDF text:', pdfText.substring(0, 200));
+          }
+        } catch (err) {
+          console.error('PDF extraction error:', err);
+        }
+      }
+    }
+
+    const fullContent = emailText + pdfText;
+
+    if (!fullContent.trim()) {
+      return NextResponse.json({ success: true, message: 'No content to process' });
     }
 
     // Find venue in Supabase by matching sender email across all users
@@ -83,7 +134,7 @@ Return JSON with these fields (use null if not mentioned):
         },
         {
           role: 'user',
-          content: `Email from venue:\nSubject: ${subject}\n\n${emailText}`
+          content: `Email from venue:\nSubject: ${subject}\n\n${fullContent}`
         }
       ],
       response_format: { type: 'json_object' },
@@ -102,7 +153,7 @@ Return JSON with these fields (use null if not mentioned):
           from: fromEmail,
           subject,
           summary: extracted.summary,
-          body: emailText,
+          body: fullContent,
           receivedAt: new Date().toISOString(),
         },
         ...(extracted.pricing && {
