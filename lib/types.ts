@@ -72,6 +72,7 @@ export interface Venue {
     from: string;
     subject: string;
     summary: string;
+    body?: string;
     receivedAt: string;
   };
 }

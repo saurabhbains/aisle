@@ -59,6 +59,7 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
   const hasFailedCriteria = venue.status === 'criteria_not_met' && venue.failedCriteria && venue.failedCriteria.length > 0;
   const [editingEmail, setEditingEmail] = useState(false);
   const [emailValue, setEmailValue] = useState(venue.contact?.email || '');
+  const [showReplyModal, setShowReplyModal] = useState(false);
   const { updateVenue } = useApp();
 
   const handleSaveEmail = () => {
@@ -126,10 +127,43 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
             <div className="flex flex-wrap items-center gap-2">
               <StatusPill status={venue.status} />
               {venue.lastReply && (
-                <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                <button
+                  onClick={() => setShowReplyModal(true)}
+                  className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 hover:bg-green-200 transition-colors"
+                >
                   <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
                   Replied {new Date(venue.lastReply.receivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                </span>
+                </button>
+              )}
+
+              {/* Reply modal */}
+              {showReplyModal && venue.lastReply && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowReplyModal(false)}>
+                  <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" />
+                  <div className="relative z-10 w-full max-w-lg rounded-2xl bg-card p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <h2 className="font-serif text-lg font-semibold text-foreground">Reply from {venue.name}</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {new Date(venue.lastReply.receivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <button onClick={() => setShowReplyModal(false)} className="text-muted-foreground hover:text-foreground">
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    {venue.lastReply.summary && (
+                      <div className="mb-4 rounded-xl bg-green-50 p-3">
+                        <p className="text-xs font-medium text-green-700 mb-1">AI Summary</p>
+                        <p className="text-sm text-green-900">{venue.lastReply.summary}</p>
+                      </div>
+                    )}
+                    <div className="rounded-xl bg-muted/50 p-4">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Subject: {venue.lastReply.subject}</p>
+                      <p className="whitespace-pre-wrap text-sm text-foreground">{venue.lastReply.body || venue.lastReply.summary || 'No content available'}</p>
+                    </div>
+                  </div>
+                </div>
               )}
               {venue.callDetails && (
                 <span className="text-xs text-muted-foreground">

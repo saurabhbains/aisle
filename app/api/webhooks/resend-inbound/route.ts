@@ -102,6 +102,7 @@ Return JSON with these fields (use null if not mentioned):
           from: fromEmail,
           subject,
           summary: extracted.summary,
+          body: emailText,
           receivedAt: new Date().toISOString(),
         },
         ...(extracted.pricing && {
