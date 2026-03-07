@@ -1,238 +1,133 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractVenueInfoFromText } from '@/lib/ai';
-import { updateVenueStatus } from '@/lib/venue-database';
+import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 
-// Resend webhook for receiving inbound emails
-// Docs: https://resend.com/docs/dashboard/receiving/introduction
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SECRET_KEY!
+);
+
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
-    console.log('Received inbound email webhook:', JSON.stringify(payload, null, 2));
-
-    // Resend inbound webhook structure:
-    // {
-    //   type: 'email.received',
-    //   created_at: '2026-02-28T...',
-    //   data: {
-    //     email_id: '...',
-    //     from: 'venue@example.com',
-    //     to: ['your-email@resend.app'],
-    //     subject: 'Re: Wedding Venue Inquiry',
-    //     ...
-    //   }
-    // }
+    console.log('Inbound email webhook received:', payload.type);
 
     if (payload.type !== 'email.received') {
-      console.log('Ignoring non-email.received event:', payload.type);
       return NextResponse.json({ success: true, message: 'Event ignored' });
     }
 
     const emailData = payload.data;
-    const emailId = emailData.email_id;
-    const fromEmail = emailData.from;
-    const subject = emailData.subject;
+    const fromEmail = emailData.from?.replace(/.*<(.+)>/, '$1').trim() || emailData.from;
+    const subject = emailData.subject || '';
+    const emailText = emailData.text || emailData.html?.replace(/<[^>]*>/g, ' ') || '';
 
-    console.log(`Processing email from ${fromEmail} with subject: ${subject}`);
+    console.log(`Processing reply from: ${fromEmail}`);
+    console.log(`Subject: ${subject}`);
 
-    // Check if this is a test/simulated email (test emails have text/html already in payload)
-    let emailDetails;
-    if (emailData.text || emailData.html) {
-      // Simulated/test email - use data directly from payload
-      console.log('Using email data from payload (test mode)');
-      emailDetails = emailData;
-    } else {
-      // Real Resend webhook - fetch full details using API
-      console.log('Fetching email details from Resend API');
-      emailDetails = await fetchEmailDetails(emailId);
+    if (!emailText.trim()) {
+      return NextResponse.json({ success: true, message: 'No email text to process' });
+    }
 
-      if (!emailDetails) {
-        console.error('Failed to fetch email details');
-        return NextResponse.json({ success: false, error: 'Failed to fetch email details' });
+    // Find venue in Supabase by matching sender email across all users
+    const { data: allVenueRows } = await supabase
+      .from('user_venues')
+      .select('user_id, venues');
+
+    let matchedUserId: string | null = null;
+    let matchedVenueId: string | null = null;
+    let matchedVenues: any[] = [];
+
+    for (const row of allVenueRows || []) {
+      const venues = row.venues || [];
+      const venue = venues.find((v: any) =>
+        v.contact?.email?.toLowerCase() === fromEmail.toLowerCase()
+      );
+      if (venue) {
+        matchedUserId = row.user_id;
+        matchedVenueId = venue.id;
+        matchedVenues = venues;
+        break;
       }
     }
 
-    // Find which venue this email is from by matching the sender email
-    const venueId = await findVenueByEmail(fromEmail);
-
-    if (!venueId) {
-      console.log(`No venue found for email: ${fromEmail}`);
-      return NextResponse.json({
-        success: true,
-        message: 'Email received but no matching venue found'
-      });
+    if (!matchedUserId || !matchedVenueId) {
+      console.log(`No venue found matching email: ${fromEmail}`);
+      return NextResponse.json({ success: true, message: 'No matching venue found' });
     }
 
-    // Extract venue info from email body (text content)
-    const emailText = emailDetails.text || emailDetails.html || '';
-    let venueInfo: any = {};
+    console.log(`Found venue ${matchedVenueId} for user ${matchedUserId}`);
 
-    if (emailText) {
-      venueInfo = await extractVenueInfoFromText(emailText);
-    }
+    // Use GPT-4o to extract venue info from the reply
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `You are a wedding venue assistant. Extract any useful information from this venue's email reply.
 
-    // Download and parse PDF attachments if present
-    if (emailDetails.attachments && emailDetails.attachments.length > 0) {
-      console.log(`Found ${emailDetails.attachments.length} attachments`);
-
-      for (const attachment of emailDetails.attachments) {
-        if (attachment.content_type?.includes('pdf')) {
-          console.log(`Processing PDF attachment: ${attachment.filename}`);
-
-          let pdfData;
-
-          // Check if this is a test email with base64 content or production email with download URL
-          if (attachment.content) {
-            // Test mode: PDF content is base64 encoded in the attachment
-            console.log('Using base64 PDF content from test payload');
-            pdfData = Buffer.from(attachment.content, 'base64').buffer;
-          } else if (attachment.download_url) {
-            // Production mode: Download the PDF using the attachment URL
-            console.log('Downloading PDF from Resend');
-            pdfData = await downloadAttachment(attachment.download_url);
-          }
-
-          if (pdfData) {
-            // Parse the PDF and extract venue information
-            const pdfInfo = await parsePDFContent(pdfData);
-
-            // Merge PDF info with email text info
-            venueInfo = { ...venueInfo, ...pdfInfo };
-          }
+Return JSON with these fields (use null if not mentioned):
+{
+  "availability": string | null,
+  "pricing": string | null,
+  "capacity": number | null,
+  "hasAccommodation": boolean | null,
+  "hasOutdoorSpace": boolean | null,
+  "cateringOptions": string | null,
+  "contactName": string | null,
+  "contactPhone": string | null,
+  "summary": string,
+  "missingInfoResolved": string[]
+}`
+        },
+        {
+          role: 'user',
+          content: `Email from venue:\nSubject: ${subject}\n\n${emailText}`
         }
-      }
-    }
-
-    // Update venue status to 'responded' with the extracted information
-    const responseData = {
-      responseDate: new Date().toISOString(),
-      availability: venueInfo.availability || 'Replied - check details',
-      pricing: venueInfo.pricing || 'See attached brochure',
-      additionalInfo: venueInfo.notes || '',
-      contactPerson: venueInfo.contactPerson || extractNameFromEmail(fromEmail),
-      contactEmail: fromEmail,
-      contactPhone: venueInfo.phone || '',
-      emailSubject: subject,
-      emailBody: emailText.substring(0, 500), // First 500 chars
-      attachments: emailDetails.attachments?.map((att: any) => ({
-        type: att.content_type,
-        name: att.filename,
-        size: att.size,
-        url: att.download_url
-      })) || [],
-      extractedData: venueInfo
-    };
-
-    updateVenueStatus(venueId, 'responded', responseData);
-
-    console.log(`✓ Updated venue ${venueId} with response data`);
-
-    return NextResponse.json({
-      success: true,
-      venueId,
-      message: 'Email processed successfully'
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 1000,
     });
+
+    const extracted = JSON.parse(completion.choices[0].message.content || '{}');
+    console.log('Extracted info:', extracted);
+
+    // Update the venue in Supabase
+    const updatedVenues = matchedVenues.map((v: any) => {
+      if (v.id !== matchedVenueId) return v;
+      return {
+        ...v,
+        status: 'awaiting_response',
+        lastReply: {
+          from: fromEmail,
+          subject,
+          summary: extracted.summary,
+          receivedAt: new Date().toISOString(),
+        },
+        ...(extracted.pricing && { priceRange: { min: 0, max: 0, text: extracted.pricing } }),
+        ...(extracted.capacity && { capacity: { min: Math.floor(extracted.capacity * 0.5), max: extracted.capacity } }),
+        ...(extracted.contactName && {
+          contact: { ...v.contact, name: extracted.contactName, phone: extracted.contactPhone || v.contact?.phone || '' }
+        }),
+        missingInfoItems: (v.missingInfoItems || []).filter(
+          (item: string) => !extracted.missingInfoResolved?.some(
+            (resolved: string) => item.toLowerCase().includes(resolved.toLowerCase())
+          )
+        ),
+      };
+    });
+
+    await supabase
+      .from('user_venues')
+      .update({ venues: updatedVenues, updated_at: new Date().toISOString() })
+      .eq('user_id', matchedUserId);
+
+    console.log(`✓ Updated venue ${matchedVenueId} with reply from ${fromEmail}`);
+
+    return NextResponse.json({ success: true, venueId: matchedVenueId });
   } catch (error: any) {
-    console.error('Webhook processing error:', error);
-    return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
-    );
+    console.error('Webhook error:', error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}
-
-// Fetch full email details from Resend API
-async function fetchEmailDetails(emailId: string) {
-  try {
-    const response = await fetch(`https://api.resend.com/emails/${emailId}`, {
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch email: ${response.statusText}`);
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching email details:', error);
-    return null;
-  }
-}
-
-// Download attachment from Resend
-async function downloadAttachment(downloadUrl: string) {
-  try {
-    const response = await fetch(downloadUrl, {
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to download attachment: ${response.statusText}`);
-    }
-
-    return await response.arrayBuffer();
-  } catch (error) {
-    console.error('Error downloading attachment:', error);
-    return null;
-  }
-}
-
-// Parse PDF content (reuse existing PDF parsing logic)
-async function parsePDFContent(pdfData: ArrayBuffer) {
-  try {
-    // Convert ArrayBuffer to base64
-    const base64 = Buffer.from(pdfData).toString('base64');
-
-    // Call the existing PDF parsing API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/parse-pdf`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        pdfData: base64,
-        fileName: 'venue-response.pdf'
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('PDF parsing failed');
-    }
-
-    const result = await response.json();
-    return result.venueInfo || {};
-  } catch (error) {
-    console.error('Error parsing PDF:', error);
-    return {};
-  }
-}
-
-// Find venue by email address
-async function findVenueByEmail(email: string): Promise<string | null> {
-  // This is a simple implementation - you might want to enhance this
-  // to check against your venue database
-  // For now, we'll extract it from the in-memory venue database
-  try {
-    const { getAllVenues } = await import('@/lib/venue-database');
-    const venues = getAllVenues();
-
-    const venue = venues.find((v: any) =>
-      v.email?.toLowerCase() === email.toLowerCase()
-    );
-
-    return venue?.id || null;
-  } catch (error) {
-    console.error('Error finding venue by email:', error);
-    return null;
-  }
-}
-
-// Extract person name from email address
-function extractNameFromEmail(email: string): string {
-  const username = email.split('@')[0];
-  return username
-    .split(/[._-]/)
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
 }
