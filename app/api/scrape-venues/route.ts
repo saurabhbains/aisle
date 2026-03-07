@@ -48,7 +48,7 @@ For each venue, extract:
 - niceToHavesMatched: string[] (which nice-to-haves it satisfies)
 - notes: Brief description
 
-Return JSON with "venues" array of 8-12 venues that satisfy ALL must-haves, sorted by niceToHaveScore descending (highest score first).
+Return JSON with "venues" array of 15-20 venues that satisfy ALL must-haves, sorted by niceToHaveScore descending (highest score first).
 
 CRITICAL: Only return venues that match the location specified in the must-haves.`
         },
@@ -66,7 +66,7 @@ Return venues sorted by how many nice-to-haves they match (best match first).`
         }
       ],
       response_format: { type: "json_object" },
-      max_tokens: 4000
+      max_tokens: 8000
     });
 
     const result = completion.choices[0].message.content;
