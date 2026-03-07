@@ -114,8 +114,14 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
           )}
 
           <div className="mt-2 flex flex-col gap-1">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <StatusPill status={venue.status} />
+              {venue.lastReply && (
+                <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                  Replied {new Date(venue.lastReply.receivedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                </span>
+              )}
               {venue.callDetails && (
                 <span className="text-xs text-muted-foreground">
                   Call: {venue.callDetails.scheduledDate} at {venue.callDetails.scheduledTime}
