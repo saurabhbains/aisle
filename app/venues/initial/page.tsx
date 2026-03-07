@@ -131,7 +131,7 @@ export default function InitialVenueListPage() {
         </div>
       )}
 
-      <main className="flex-1 px-6 py-8 pb-28">
+      <main className="flex-1 px-4 py-6 pb-36 sm:px-6 sm:py-8 sm:pb-28">
         <div className="mx-auto max-w-4xl">
           {/* Header */}
           <div className="mb-8">
@@ -180,16 +180,17 @@ export default function InitialVenueListPage() {
                   <div
                     key={venue.id}
                     className={cn(
-                      'flex items-center gap-6 rounded-xl bg-card p-4 shadow-sm transition-all',
+                      'flex flex-col gap-3 rounded-xl bg-card p-4 shadow-sm transition-all sm:flex-row sm:items-center sm:gap-6',
                       isQualifiedOut && 'opacity-50'
                     )}
                   >
                     {/* Venue Image */}
-                    <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
+                    <div className="relative h-40 w-full flex-shrink-0 overflow-hidden rounded-lg sm:h-24 sm:w-24">
                       <Image
                         src={venue.imageUrl}
                         alt={venue.name}
                         fill
+                        sizes="(max-width: 640px) 100vw, 96px"
                         className={cn(
                           'object-cover',
                           isQualifiedOut && 'grayscale'
@@ -219,7 +220,7 @@ export default function InitialVenueListPage() {
                     <Button
                       variant="outline"
                       onClick={() => handleQualifyOut(venue.id)}
-                      className="flex-shrink-0 rounded-full border-border text-muted-foreground hover:bg-muted"
+                      className="w-full rounded-full border-border text-muted-foreground hover:bg-muted sm:w-auto sm:flex-shrink-0"
                     >
                       {isQualifiedOut ? 'Re-qualify' : 'Qualify out'}
                     </Button>
@@ -232,23 +233,26 @@ export default function InitialVenueListPage() {
       </main>
 
       {/* Bottom Fixed Bar */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-[#FDF5F0] px-6 py-4">
-        <div className="mx-auto flex max-w-4xl items-center justify-between">
-          <span className="text-sm text-muted-foreground">Are you happy with this list?</span>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleNoFeedback}
-              className="rounded-full border-border bg-card px-6"
-            >
-              No, leave feedback
-            </Button>
-            <Button
-              onClick={handleYesContinue}
-              className="rounded-full bg-primary px-6 text-primary-foreground hover:bg-primary/90"
-            >
-              Yes, continue
-            </Button>
+      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-[#FDF5F0] px-4 py-3 sm:px-6 sm:py-4">
+        <div className="mx-auto max-w-4xl">
+          <p className="mb-2 text-center text-sm text-muted-foreground sm:hidden">Are you happy with this list?</p>
+          <div className="flex items-center justify-between gap-3">
+            <span className="hidden text-sm text-muted-foreground sm:block">Are you happy with this list?</span>
+            <div className="flex w-full gap-2 sm:w-auto sm:gap-3">
+              <Button
+                variant="outline"
+                onClick={handleNoFeedback}
+                className="flex-1 rounded-full border-border bg-card px-4 sm:flex-none sm:px-6"
+              >
+                No, leave feedback
+              </Button>
+              <Button
+                onClick={handleYesContinue}
+                className="flex-1 rounded-full bg-primary px-4 text-primary-foreground hover:bg-primary/90 sm:flex-none sm:px-6"
+              >
+                Yes, continue
+              </Button>
+            </div>
           </div>
         </div>
       </div>

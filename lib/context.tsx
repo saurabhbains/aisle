@@ -1,8 +1,8 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { AppState, Venue, Criteria, MissingInfo } from './types';
-import { mockVenues, mockCriteria, mockMissingInfo } from './mock-data';
+import { createClient } from '@/lib/supabase/client';
 
 type Action =
   | { type: 'SET_STEP'; payload: AppState['currentStep'] }
@@ -17,13 +17,11 @@ type Action =
   | { type: 'LOAD_STATE'; payload: AppState }
   | { type: 'SET_VENUES'; payload: Venue[] };
 
-const STATE_VERSION = 2; // Increment when data structure changes
-
 const initialState: AppState = {
   currentStep: 'onboarding',
-  criteria: mockCriteria,
-  venues: mockVenues,
-  missingInfo: mockMissingInfo,
+  criteria: [],
+  venues: [],
+  missingInfo: [],
   selectedVenueId: null,
   inputMode: null,
   emailDraft: null,
@@ -88,33 +86,78 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const supabase = createClient();
+  const [loaded, setLoaded] = useState(false);
+  const isFirstCriteriaRender = useRef(true);
+  const isFirstVenuesRender = useRef(true);
 
-  // Load state from localStorage on mount (with version check)
+  // Load user data from Supabase on mount
   useEffect(() => {
-    const savedVersion = localStorage.getItem('aisle-app-version');
-    const saved = localStorage.getItem('aisle-app-state');
-    
-    // If version mismatch, clear old state and use fresh mock data
-    if (savedVersion !== String(STATE_VERSION)) {
-      localStorage.removeItem('aisle-app-state');
-      localStorage.setItem('aisle-app-version', String(STATE_VERSION));
-      return;
-    }
-    
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        dispatch({ type: 'LOAD_STATE', payload: parsed });
-      } catch (e) {
-        console.error('Failed to load saved state:', e);
+    const loadUserData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoaded(true);
+        return;
       }
-    }
+
+      const [criteriaRes, venuesRes] = await Promise.all([
+        supabase.from('user_criteria').select('criteria').eq('user_id', user.id).single(),
+        supabase.from('user_venues').select('venues').eq('user_id', user.id).single(),
+      ]);
+
+      console.log('[Supabase Load] criteriaRes:', criteriaRes.data, criteriaRes.error);
+      console.log('[Supabase Load] venuesRes:', venuesRes.data, venuesRes.error);
+
+      if (criteriaRes.data?.criteria?.length) {
+        dispatch({ type: 'UPDATE_CRITERIA', payload: criteriaRes.data.criteria });
+      }
+      if (venuesRes.data?.venues?.length) {
+        dispatch({ type: 'SET_VENUES', payload: venuesRes.data.venues });
+      }
+
+      setLoaded(true);
+    };
+
+    loadUserData();
   }, []);
 
-  // Save state to localStorage on change
+  // Save criteria to Supabase when it changes (skip the first render and until loaded)
   useEffect(() => {
-    localStorage.setItem('aisle-app-state', JSON.stringify(state));
-  }, [state]);
+    if (!loaded) return;
+    if (isFirstCriteriaRender.current) {
+      isFirstCriteriaRender.current = false;
+      return;
+    }
+    const saveCriteria = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase.from('user_criteria').upsert(
+        { user_id: user.id, criteria: state.criteria, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      );
+    };
+    saveCriteria();
+  }, [state.criteria, loaded]);
+
+  // Save venues to Supabase when they change (skip the first render and until loaded)
+  useEffect(() => {
+    if (!loaded) return;
+    if (isFirstVenuesRender.current) {
+      isFirstVenuesRender.current = false;
+      return;
+    }
+    const saveVenues = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      console.log('[Supabase Save] Saving venues:', state.venues.length);
+      const result = await supabase.from('user_venues').upsert(
+        { user_id: user.id, venues: state.venues, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      );
+      console.log('[Supabase Save] venues result:', result.error);
+    };
+    saveVenues();
+  }, [state.venues, loaded]);
 
   const getVenueById = (id: string) => state.venues.find(v => v.id === id);
   

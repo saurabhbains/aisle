@@ -16,9 +16,9 @@ export async function POST(request: NextRequest) {
 
     const openai = getOpenAIClient();
 
-    // Build search query from criteria
-    const searchQuery = buildSearchQuery(criteria);
-    console.log('Search query:', searchQuery);
+    const { mustHaves, niceToHaves, searchQuery } = parseCriteria(criteria);
+    console.log('Must-haves:', mustHaves);
+    console.log('Nice-to-haves:', niceToHaves);
 
     // Use GPT-4o to search the web and extract venue information
     const completion = await openai.chat.completions.create({
@@ -26,7 +26,10 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: "system",
-          content: `You are a wedding venue research assistant. Search the web for wedding venues matching the user's criteria.
+          content: `You are a wedding venue research assistant. Search the web for wedding venues.
+
+MUST-HAVE criteria are hard filters — only return venues that satisfy ALL of them.
+NICE-TO-HAVE criteria are used for scoring — for each venue, count how many nice-to-haves it satisfies and return that as "niceToHaveScore" (0 to ${niceToHaves.length}).
 
 For each venue, extract:
 - name: Venue name
@@ -37,28 +40,33 @@ For each venue, extract:
 - capacity: Max guest capacity (number)
 - pricing: Price range in GBP (min/max if available)
 - hasAccommodation: Has guest rooms (boolean)
-- accommodationRooms: Number of rooms
 - hasOutdoorSpace: Has outdoor space (boolean)
 - cateringOptions: "in-house", "external", or "both"
 - amenities: Array of amenities (parking, bar, etc.)
 - aesthetic: Array of styles (rustic, modern, etc.)
+- niceToHaveScore: number (how many nice-to-haves this venue satisfies)
+- niceToHavesMatched: string[] (which nice-to-haves it satisfies)
 - notes: Brief description
 
-Return JSON with "venues" array. Find 8-12 venues that CLOSELY MATCH the criteria (especially location).
+Return JSON with "venues" array of 8-12 venues that satisfy ALL must-haves, sorted by niceToHaveScore descending (highest score first).
 
-CRITICAL: Only return venues that match the location specified in the criteria. If they ask for London, only return London venues.`
+CRITICAL: Only return venues that match the location specified in the must-haves.`
         },
         {
           role: "user",
-          content: `Find wedding venues for: ${searchQuery}
+          content: `Find wedding venues matching these requirements:
 
-IMPORTANT: Pay close attention to the LOCATION requirement. Only return venues in the specified area.
+MUST-HAVES (all must be satisfied — use these to filter):
+${mustHaves.join('\n')}
 
-Return JSON with all venue details.`
+NICE-TO-HAVES (use these to score and sort — more matches = higher rank):
+${niceToHaves.length > 0 ? niceToHaves.join('\n') : 'None specified'}
+
+Return venues sorted by how many nice-to-haves they match (best match first).`
         }
       ],
       response_format: { type: "json_object" },
-      max_tokens: 4000  // Limit tokens for faster response
+      max_tokens: 4000
     });
 
     const result = completion.choices[0].message.content;
@@ -66,8 +74,10 @@ Return JSON with all venue details.`
 
     console.log('Found venues:', data);
 
-    // The response should have a "venues" array
     const venues = data.venues || [];
+
+    // Sort by niceToHaveScore descending (AI should already do this, but ensure it)
+    venues.sort((a: any, b: any) => (b.niceToHaveScore || 0) - (a.niceToHaveScore || 0));
 
     return NextResponse.json({
       success: true,
@@ -76,8 +86,9 @@ Return JSON with all venue details.`
         id: `scraped-${Date.now()}-${index}`,
         name: v.name,
         location: v.location,
+        website: v.website || null,
         imageUrl: v.imageUrl || 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=300&fit=crop',
-        type: 'country_estate', // Default type
+        type: 'country_estate',
         capacity: {
           min: v.capacity ? Math.floor(v.capacity * 0.5) : 50,
           max: v.capacity || 150
@@ -87,8 +98,11 @@ Return JSON with all venue details.`
           max: v.pricing?.max || 15000
         },
         status: 'missing_info',
-        matchScore: 85,
+        matchScore: niceToHaves.length > 0
+          ? Math.round(50 + ((v.niceToHaveScore || 0) / niceToHaves.length) * 50)
+          : 85,
         features: v.amenities || [],
+        niceToHavesMatched: v.niceToHavesMatched || [],
         contact: v.email || v.website ? {
           name: 'Events Team',
           email: v.email || 'info@venue.com',
@@ -113,42 +127,34 @@ Return JSON with all venue details.`
   }
 }
 
-function buildSearchQuery(criteria: any): string {
-  // If criteria is a string (raw text from recap page), parse it
+function parseCriteria(criteria: any): { mustHaves: string[]; niceToHaves: string[]; searchQuery: string } {
   if (typeof criteria === 'string') {
-    return `UK wedding venues matching: ${criteria}`;
+    // Split on Must-haves / Nice-to-haves sections if present
+    const mustMatch = criteria.match(/Must-haves?:\s*([\s\S]*?)(?=Nice-to-haves?:|$)/i);
+    const niceMatch = criteria.match(/Nice-to-haves?:\s*([\s\S]*?)$/i);
+
+    const mustHaves = mustMatch
+      ? mustMatch[1].split('\n').map((l: string) => l.trim()).filter(Boolean)
+      : criteria.split('\n').map((l: string) => l.trim()).filter(Boolean);
+
+    const niceToHaves = niceMatch
+      ? niceMatch[1].split('\n').map((l: string) => l.trim()).filter(Boolean)
+      : [];
+
+    return { mustHaves, niceToHaves, searchQuery: mustHaves.join(', ') };
   }
 
-  // Otherwise use the structured format
-  const parts = [];
+  // Structured format (legacy)
+  const mustHaves = [];
+  const niceToHaves = [];
 
-  if (criteria.hardCriteria?.location) {
-    parts.push(`in ${criteria.hardCriteria.location}`);
-  }
+  if (criteria.hardCriteria?.location) mustHaves.push(`Location: ${criteria.hardCriteria.location}`);
+  if (criteria.hardCriteria?.guestCount) mustHaves.push(`Guests: ${criteria.hardCriteria.guestCount}`);
+  if (criteria.hardCriteria?.budget) mustHaves.push(`Budget: £${criteria.hardCriteria.budget}`);
+  if (criteria.hardCriteria?.needsAccommodation) mustHaves.push('Accommodation required');
+  if (criteria.hardCriteria?.cateringPreference) mustHaves.push(`Catering: ${criteria.hardCriteria.cateringPreference}`);
+  if (criteria.softCriteria?.needsOutdoorSpace) niceToHaves.push('Outdoor space');
+  if (criteria.softCriteria?.aestheticPreference) niceToHaves.push(criteria.softCriteria.aestheticPreference);
 
-  if (criteria.hardCriteria?.guestCount) {
-    parts.push(`capacity ${criteria.hardCriteria.guestCount}+ guests`);
-  }
-
-  if (criteria.hardCriteria?.budget) {
-    parts.push(`under £${criteria.hardCriteria.budget}`);
-  }
-
-  if (criteria.hardCriteria?.needsAccommodation) {
-    parts.push('with accommodation');
-  }
-
-  if (criteria.hardCriteria?.cateringPreference) {
-    parts.push(`${criteria.hardCriteria.cateringPreference} catering`);
-  }
-
-  if (criteria.softCriteria?.needsOutdoorSpace) {
-    parts.push('outdoor space');
-  }
-
-  if (criteria.softCriteria?.aestheticPreference) {
-    parts.push(criteria.softCriteria.aestheticPreference);
-  }
-
-  return `UK wedding venues ${parts.join(', ')}`;
+  return { mustHaves, niceToHaves, searchQuery: mustHaves.join(', ') };
 }

@@ -28,6 +28,7 @@ export interface Venue {
   status: VenueStatus;
   matchScore: number;
   features: string[];
+  website?: string;
   contact?: {
     name: string;
     email: string;

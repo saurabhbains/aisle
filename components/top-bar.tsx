@@ -1,10 +1,22 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { ChevronLeft, Settings, User } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { ChevronLeft, Settings, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 interface TopBarProps {
   title?: string;
@@ -24,6 +36,13 @@ export function TopBar({
   className,
 }: TopBarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   return (
     <header
@@ -46,21 +65,25 @@ export function TopBar({
         </Link>
       </div>
 
-      <nav className="hidden items-center gap-6 md:flex">
+      <nav className="flex items-center gap-1">
         <Link
           href="/venues/status"
           className={cn(
-            'text-sm font-medium transition-colors hover:text-primary',
-            pathname === '/venues/status' ? 'text-primary' : 'text-muted-foreground'
+            'rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:px-4 sm:text-sm',
+            pathname === '/venues/status'
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           )}
         >
           Dashboard
         </Link>
         <Link
-          href="/criteria"
+          href="/onboarding"
           className={cn(
-            'text-sm font-medium transition-colors hover:text-primary',
-            pathname.startsWith('/criteria') ? 'text-primary' : 'text-muted-foreground'
+            'rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:px-4 sm:text-sm',
+            pathname.startsWith('/onboarding') || pathname.startsWith('/criteria')
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           )}
         >
           Criteria
@@ -75,10 +98,26 @@ export function TopBar({
           </Button>
         )}
         {showProfile && (
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <User className="h-5 w-5" />
-            <span className="sr-only">Profile</span>
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9">
+                <LogOut className="h-5 w-5" />
+                <span className="sr-only">Sign out</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Sign out?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to sign out?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSignOut}>Yes, sign out</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </div>
     </header>

@@ -14,7 +14,9 @@ import {
   ChevronRight,
   Star,
   Mail,
-  X
+  X,
+  Share2,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -285,6 +287,10 @@ export default function StatusDashboardPage() {
   const [responseText, setResponseText] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isProcessingResponse, setIsProcessingResponse] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [shareEmail, setShareEmail] = useState('');
+  const [isSharingVenues, setIsSharingVenues] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   const selectedVenue = selectedVenueForEmail ? getVenueById(selectedVenueForEmail) : null;
 
@@ -836,6 +842,31 @@ Sarah & John`;
     setSelectedVenueForResponse(null);
   };
 
+  const handleShareVenues = async () => {
+    if (!shareEmail.trim()) return;
+    setIsSharingVenues(true);
+    try {
+      const res = await fetch('/api/share-venues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toEmail: shareEmail, venues: state.venues }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShareSuccess(true);
+        setTimeout(() => {
+          setShowShareModal(false);
+          setShareEmail('');
+          setShareSuccess(false);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+    } finally {
+      setIsSharingVenues(false);
+    }
+  };
+
   const stats = {
     total: state.venues.length,
     inProgress: state.venues.filter(v => 
@@ -864,11 +895,11 @@ Sarah & John`;
           />
 
           {/* Modal Content - Scrollable Container */}
-          <div className="relative z-10 mx-auto w-full max-w-2xl my-8">
+          <div className="relative z-10 mx-auto w-full max-w-2xl my-8 px-4 sm:px-0">
             {/* Venue Card Preview */}
-            <div className="mb-4 rounded-2xl bg-card p-6 shadow-lg">
-              <div className="flex gap-6">
-                <div className="h-32 w-48 flex-shrink-0 rounded-lg bg-muted">
+            <div className="mb-4 rounded-2xl bg-card p-4 shadow-lg sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:gap-6">
+                <div className="h-32 w-full flex-shrink-0 rounded-lg bg-muted sm:w-48">
                   <div className="flex h-full w-full items-center justify-center">
                     <MapPin className="h-12 w-12 text-muted-foreground" />
                   </div>
@@ -995,12 +1026,60 @@ Sarah & John`;
       )}
 
       {/* Venue Response Modal - Combined Upload and Text */}
+      {/* Share Venues Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowShareModal(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-2xl bg-card p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-serif text-xl font-semibold text-foreground">Share venue list</h2>
+              <button onClick={() => setShowShareModal(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {shareSuccess ? (
+              <div className="py-6 text-center">
+                <p className="text-lg font-medium text-green-600">Email sent!</p>
+                <p className="mt-1 text-sm text-muted-foreground">Your venue list has been shared.</p>
+              </div>
+            ) : (
+              <>
+                <p className="mb-4 text-sm text-muted-foreground">
+                  Enter an email address and we'll send them your list of {state.venues.length} venues.
+                </p>
+                <input
+                  type="email"
+                  value={shareEmail}
+                  onChange={(e) => setShareEmail(e.target.value)}
+                  placeholder="friend@example.com"
+                  className="mb-4 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  onKeyDown={(e) => e.key === 'Enter' && handleShareVenues()}
+                />
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setShowShareModal(false)} className="flex-1 rounded-full">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleShareVenues}
+                    disabled={!shareEmail.trim() || isSharingVenues}
+                    className="flex-1 gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {isSharingVenues ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending...</> : 'Send email'}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {showResponseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={handleCancelResponse} />
-          <div className="relative z-10 mx-auto w-full max-w-2xl my-8">
-            <div className="rounded-2xl bg-card p-8 shadow-xl">
-              <h2 className="mb-6 text-center font-serif text-2xl font-semibold text-foreground">
+          <div className="relative z-10 mx-auto w-full max-w-2xl my-8 px-4 sm:px-0">
+            <div className="rounded-2xl bg-card p-5 shadow-xl sm:p-8">
+              <h2 className="mb-6 text-center font-serif text-xl font-semibold text-foreground sm:text-2xl">
                 Add Venue Response
               </h2>
 
@@ -1074,7 +1153,7 @@ Sarah & John`;
           />
           
           {/* Modal */}
-          <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-card p-8 shadow-xl">
+          <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-card p-5 shadow-xl sm:p-8">
             <h2 className="mb-6 font-serif text-2xl font-semibold text-foreground">
               Book a call
             </h2>
@@ -1172,7 +1251,7 @@ Sarah & John`;
           />
           
           {/* Modal */}
-          <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-card p-8 shadow-xl">
+          <div className="relative z-10 mx-4 w-full max-w-lg rounded-2xl bg-card p-5 shadow-xl sm:p-8">
             <h2 className="mb-6 font-serif text-2xl font-semibold text-foreground">
               Book a visit
             </h2>
@@ -1260,7 +1339,7 @@ Sarah & John`;
         </div>
       )}
 
-      <main className="flex-1 px-6 py-8">
+      <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-6xl">
           {/* Header */}
           <div className="mb-8">
@@ -1383,12 +1462,12 @@ Sarah & John`;
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex w-full gap-3 sm:w-auto">
                   <Button
                     variant="outline"
                     disabled={!selectedVenueForBooking}
                     onClick={handleOpenCallBooking}
-                    className="gap-2 rounded-full"
+                    className="flex-1 gap-2 rounded-full sm:flex-none"
                   >
                     <Phone className="h-4 w-4" />
                     Book a Call
@@ -1396,7 +1475,7 @@ Sarah & John`;
                   <Button
                     disabled={!selectedVenueForBooking}
                     onClick={handleOpenVisitBooking}
-                    className="gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="flex-1 gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:flex-none"
                   >
                     <Calendar className="h-4 w-4" />
                     Book a Visit
@@ -1409,7 +1488,20 @@ Sarah & John`;
           {/* Venue List with Tabs */}
           <Card>
             <CardHeader>
-              <CardTitle className="font-serif text-xl">All Venues</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="font-serif text-xl">All Venues</CardTitle>
+                {state.venues.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowShareModal(true)}
+                    className="gap-2 rounded-full border-border text-muted-foreground hover:bg-muted"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Share list
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>

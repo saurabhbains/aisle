@@ -107,20 +107,20 @@ ${displayNiceToHaves.join('\n')}
     <div className="flex min-h-screen flex-col bg-background">
       <TopBar />
 
-      <main className="flex flex-1 flex-col px-6 py-8">
+      <main className="flex flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8">
         <div className="mx-auto w-full max-w-5xl flex-1">
           {/* Header */}
-          <div className="mb-10 text-center">
-            <h1 className="font-serif text-4xl font-semibold text-foreground">
+          <div className="mb-8 text-center sm:mb-10">
+            <h1 className="font-serif text-3xl font-semibold text-foreground sm:text-4xl">
               Review your criteria
             </h1>
-            <p className="mt-3 text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground sm:mt-3 sm:text-base">
               Please review your venue requirements before we start our search
             </p>
           </div>
 
           {/* Two-column cards */}
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
             {/* Must-haves card */}
             <Card className="border border-border bg-card">
               <CardContent className="p-6">
@@ -168,18 +168,18 @@ ${displayNiceToHaves.join('\n')}
         </div>
 
         {/* Bottom action buttons - centered */}
-        <div className="mt-12 flex items-center justify-center gap-4">
+        <div className="mt-8 flex flex-col items-center gap-3 sm:mt-12 sm:flex-row sm:justify-center sm:gap-4">
           <Button
             variant="outline"
             onClick={handleAmend}
-            className="min-w-40 rounded-full border-primary bg-transparent text-primary hover:bg-primary/10"
+            className="w-full rounded-full border-primary bg-transparent text-primary hover:bg-primary/10 sm:w-40"
           >
             Amend criteria
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={isLoadingVenues}
-            className="min-w-40 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+            className="w-full rounded-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-40"
           >
             {isLoadingVenues ? 'Loading venues...' : 'Confirm & continue'}
           </Button>

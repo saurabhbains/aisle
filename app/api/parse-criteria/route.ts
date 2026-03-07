@@ -18,22 +18,19 @@ export async function POST(req: NextRequest) {
 Current criteria already captured:
 ${currentCriteria || 'None yet'}
 
-Parse the new input and extract:
-- Location (city/region)
-- Number of guests
-- Budget (with currency)
-- Date/season preferences
-- Venue type preferences (outdoor, indoor, garden, barn, etc.)
-- Any other specific requirements
+Parse the new input and extract each requirement on its own line. Prefix each line with [MUST] or [NICE]:
+- [MUST] for anything stated as a firm requirement, fact, or necessity
+- [NICE] only if the person explicitly used soft language like "nice to have", "it would be nice", "ideally", "if possible", "prefer", "optional"
 
-Format the output as a clean bullet list with one requirement per line, like:
-Location: London
-Number of Guests: 100
-Budget: £100,000
-Season: Summer 2025
-Venue Style: Outdoor garden
+Examples:
+[MUST] Location: London
+[MUST] Number of Guests: 100
+[MUST] Budget: £10,000
+[MUST] Date: July 2026
+[NICE] Hotel nearby for accommodation
+[NICE] Parking space for all cars
 
-Only include information that was mentioned. Be concise and specific.`;
+Only include information that was mentioned. Be concise and specific. One item per line.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
