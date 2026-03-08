@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Filter, X, Mail, CheckSquare, Square } from 'lucide-react';
+import { Filter, X, Mail, CheckSquare, Square, GitCompareArrows } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/top-bar';
 import { VenueCard } from '@/components/venue-card';
@@ -204,23 +204,35 @@ export default function VenuesPage() {
                     {selectedVenues.size} venue{selectedVenues.size !== 1 ? 's' : ''} selected
                   </span>
                 </div>
-                <Button
-                  onClick={handleSendEmails}
-                  disabled={selectedVenues.size === 0 || isSending}
-                  className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {isSending ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="h-4 w-4" />
-                      Send Emails ({selectedVenues.size})
-                    </>
+                <div className="flex gap-2">
+                  {selectedVenues.size >= 2 && selectedVenues.size <= 3 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push(`/compare?ids=${Array.from(selectedVenues).join(',')}`)}
+                      className="flex items-center gap-2"
+                    >
+                      <GitCompareArrows className="h-4 w-4" />
+                      Compare ({selectedVenues.size})
+                    </Button>
                   )}
-                </Button>
+                  <Button
+                    onClick={handleSendEmails}
+                    disabled={selectedVenues.size === 0 || isSending}
+                    className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {isSending ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4" />
+                        Send Emails ({selectedVenues.size})
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
 

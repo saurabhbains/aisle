@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Calendar, Heart, Mail, MapPin, TrendingUp, Users } from 'lucide-react';
+import { Calendar, Heart, Mail, MapPin, TrendingUp, Users, GitCompareArrows } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TopBar } from '@/components/top-bar';
@@ -86,7 +86,7 @@ export default function DashboardPage() {
             <h2 className="mb-4 font-serif text-xl font-semibold text-foreground">
               Quick Actions
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <Button
                 variant="outline"
                 className="h-auto flex-col gap-3 p-6"
@@ -118,6 +118,14 @@ export default function DashboardPage() {
               >
                 <Mail className="h-8 w-8 text-primary" />
                 <span className="text-sm font-medium">Send Emails</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="h-auto flex-col gap-3 p-6"
+                onClick={() => router.push('/venues')}
+              >
+                <GitCompareArrows className="h-8 w-8 text-primary" />
+                <span className="text-sm font-medium">Compare Venues</span>
               </Button>
             </div>
           </div>
