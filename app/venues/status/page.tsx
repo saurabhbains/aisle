@@ -959,7 +959,7 @@ Sarah & John`;
   const upcomingVisits = state.venues.filter(v => v.status === 'visit_scheduled');
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-background overflow-x-hidden">
       <TopBar showSettings />
 
       {/* Email Approval Modal */}

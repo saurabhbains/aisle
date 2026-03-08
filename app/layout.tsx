@@ -51,7 +51,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${crimsonText.variable} ${inter.variable} font-sans antialiased`}>
+      <body className={`${crimsonText.variable} ${inter.variable} font-sans antialiased overflow-x-hidden`}>
         <AppProvider>
           {children}
         </AppProvider>
