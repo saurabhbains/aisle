@@ -652,7 +652,7 @@ Sarah & John`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: venue.contact?.email || 'saurabhbains@berkeley.edu',
+          to: venue.contact?.email || '',
           subject: `Additional Information Request - ${venue.name}`,
           emailBody: data.emailContent,
           inReplyTo: venue.lastReply?.messageId || undefined,
