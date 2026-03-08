@@ -35,13 +35,23 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Build photo URLs — use maxwidth=1600 for high quality
-    const photos = photoRefs.map((ref) => ({
-      url: `${PLACES_BASE}/photo?maxwidth=1600&photoreference=${ref}&key=${GOOGLE_PLACES_API_KEY}`,
-      thumbnail: `${PLACES_BASE}/photo?maxwidth=400&photoreference=${ref}&key=${GOOGLE_PLACES_API_KEY}`,
-    }));
+    // Resolve each photo ref to a final googleusercontent.com URL server-side
+    const photos = await Promise.all(
+      photoRefs.map(async (ref) => {
+        try {
+          const placesUrl = `${PLACES_BASE}/photo?maxwidth=1600&photoreference=${ref}&key=${GOOGLE_PLACES_API_KEY}`;
+          const res = await fetch(placesUrl, { redirect: 'follow' });
+          const finalUrl = res.url; // resolved lh3.googleusercontent.com URL
+          // Build thumbnail by replacing the size param
+          const thumbnailUrl = finalUrl.replace(/s1600-w\d+/, 's400-w400');
+          return { url: finalUrl, thumbnail: thumbnailUrl };
+        } catch {
+          return null;
+        }
+      })
+    );
 
-    return NextResponse.json({ photos });
+    return NextResponse.json({ photos: photos.filter(Boolean) });
   } catch (error: any) {
     console.error('Venue photos error:', error);
     return NextResponse.json({ photos: [] });
