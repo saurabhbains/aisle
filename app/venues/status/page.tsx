@@ -1602,16 +1602,18 @@ Sarah & John`;
               <div className="flex items-center justify-between">
                 <CardTitle className="font-serif text-xl">All Venues</CardTitle>
                 <div className="flex items-center gap-2">
-                  {selectedForCompare.size >= 2 && (
-                    <Button
-                      size="sm"
-                      onClick={() => router.push(`/compare?ids=${Array.from(selectedForCompare).join(',')}`)}
-                      className="gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      <GitCompareArrows className="h-4 w-4" />
-                      Compare ({selectedForCompare.size})
-                    </Button>
-                  )}
+                  <Button
+                    size="sm"
+                    variant={selectedForCompare.size >= 2 ? 'default' : 'outline'}
+                    disabled={selectedForCompare.size < 2}
+                    onClick={() => router.push(`/compare?ids=${Array.from(selectedForCompare).join(',')}`)}
+                    className="gap-2 rounded-full"
+                  >
+                    <GitCompareArrows className="h-4 w-4" />
+                    {selectedForCompare.size >= 2
+                      ? `Compare (${selectedForCompare.size})`
+                      : 'Compare venues'}
+                  </Button>
                   {state.venues.length > 0 && (
                     <Button
                       variant="outline"
