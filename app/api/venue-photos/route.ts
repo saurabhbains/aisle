@@ -49,11 +49,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Return proxy URLs — browser loads images via our own API, no redirect issues
-    const baseUrl = req.nextUrl.origin;
+    // Return proxy URLs — use relative paths so they work on any domain
     const photos = photoRefs.map((ref) => ({
-      url: `${baseUrl}/api/venue-photos?proxyRef=${encodeURIComponent(ref)}&size=1600`,
-      thumbnail: `${baseUrl}/api/venue-photos?proxyRef=${encodeURIComponent(ref)}&size=400`,
+      url: `/api/venue-photos?proxyRef=${encodeURIComponent(ref)}&size=1600`,
+      thumbnail: `/api/venue-photos?proxyRef=${encodeURIComponent(ref)}&size=400`,
     }));
 
     return NextResponse.json({ photos });

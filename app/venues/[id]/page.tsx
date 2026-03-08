@@ -48,16 +48,22 @@ export default function VenueDetailPage({ params }: VenueDetailPageProps) {
   const [photos, setPhotos] = useState<{ url: string; thumbnail: string }[]>([]);
   const [activePhoto, setActivePhoto] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [photosLoading, setPhotosLoading] = useState(true);
 
   useEffect(() => {
     if (!venue) return;
+    setPhotosLoading(true);
     const params = new URLSearchParams({ name: venue.name, location: venue.location });
     if (venue.googlePhotoRefs?.length) {
       params.set('photoRefs', venue.googlePhotoRefs.join(','));
     }
     fetch(`/api/venue-photos?${params}`)
       .then(r => r.json())
-      .then(d => { if (d.photos?.length) setPhotos(d.photos); });
+      .then(d => {
+        if (d.photos?.length) setPhotos(d.photos);
+        setPhotosLoading(false);
+      })
+      .catch(() => setPhotosLoading(false));
   }, [venue?.id]);
 
   // Call booking handlers
@@ -393,7 +399,11 @@ export default function VenueDetailPage({ params }: VenueDetailPageProps) {
       <main className="flex-1 px-6 py-8">
         <div className="mx-auto max-w-4xl">
           {/* Photo Gallery */}
-          {photos.length > 0 ? (
+          {photosLoading ? (
+            <div className="mb-8 flex h-80 items-center justify-center overflow-hidden rounded-xl bg-muted sm:h-96">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted-foreground border-t-primary" />
+            </div>
+          ) : photos.length > 0 ? (
             <div className="mb-8">
               {/* Main photo */}
               <div
