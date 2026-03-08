@@ -1603,6 +1603,14 @@ Sarah & John`;
                 <CardTitle className="font-serif text-xl">All Venues</CardTitle>
                 <div className="flex items-center gap-2">
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => router.push('/lists')}
+                    className="gap-2 rounded-full border-border text-muted-foreground hover:bg-muted"
+                  >
+                    My Lists
+                  </Button>
+                  <Button
                     size="sm"
                     variant={selectedForCompare.size >= 2 ? 'default' : 'outline'}
                     disabled={selectedForCompare.size < 2}
