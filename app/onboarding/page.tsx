@@ -245,10 +245,10 @@ export default function OnboardingPage() {
           {/* Header */}
           <div className="mb-8 text-center sm:mb-10">
             <h1 className="font-serif text-3xl font-semibold text-foreground sm:text-4xl md:text-5xl">
-              Tell us what you're looking for
+              Describe your perfect wedding
             </h1>
             <p className="mt-3 text-base text-muted-foreground sm:mt-4 sm:text-lg">
-              Type, dictate, or attach images — all in one place.
+              Talk, type, or share inspiration images — Aisle will find venues that match your vision.
             </p>
           </div>
 
@@ -258,7 +258,7 @@ export default function OnboardingPage() {
               <textarea
                 value={textInput}
                 onChange={(e) => handleTextChange(e.target.value)}
-                placeholder="Describe your wedding — location, guest count, budget, date, vibe..."
+                placeholder="e.g. I want a wedding in London in June 2026 for 100 guests with a budget of £15,000. Say 'nice to have' for preferences like outdoor space or parking — everything else becomes a must-have."
                 className="h-40 w-full resize-none rounded-xl bg-white p-4 pr-14 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 border border-[#E8E0D8]"
               />
               <button
