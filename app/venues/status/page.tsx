@@ -17,7 +17,10 @@ import {
   X,
   Share2,
   Loader2,
-  Pencil
+  Pencil,
+  GitCompareArrows,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,9 +55,11 @@ interface VenueRowProps {
   onAddResponse?: (venueId: string) => void;
   onRemoveVenue?: (venueId: string) => void;
   onSendFollowUp?: (venueId: string) => void;
+  isSelected?: boolean;
+  onToggleSelect?: (venueId: string) => void;
 }
 
-function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendFollowUp }: VenueRowProps) {
+function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendFollowUp, isSelected, onToggleSelect }: VenueRowProps) {
   const hasMissingInfo = (venue.status === 'missing_info' || venue.contactAllowed) && venue.missingInfoItems && venue.missingInfoItems.length > 0;
   const hasFailedCriteria = venue.status === 'criteria_not_met' && venue.failedCriteria && venue.failedCriteria.length > 0;
   const [editingEmail, setEditingEmail] = useState(false);
@@ -75,6 +80,18 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
       className="rounded-lg border border-border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-sm"
     >
       <div className="flex items-start gap-4">
+        {onToggleSelect && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleSelect(venue.id); }}
+            className="mt-1 flex-shrink-0"
+          >
+            {isSelected ? (
+              <CheckSquare className="h-5 w-5 text-primary" />
+            ) : (
+              <Square className="h-5 w-5 text-muted-foreground" />
+            )}
+          </button>
+        )}
         <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
           <img
             src={venueImage}
@@ -349,6 +366,17 @@ export default function StatusDashboardPage() {
   const router = useRouter();
   const { state, getVenuesByStatus, updateVenue, getVenueById } = useApp();
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [selectedForCompare, setSelectedForCompare] = useState<Set<string>>(new Set());
+
+  const toggleCompareSelection = (venueId: string) => {
+    const next = new Set(selectedForCompare);
+    if (next.has(venueId)) {
+      next.delete(venueId);
+    } else if (next.size < 3) {
+      next.add(venueId);
+    }
+    setSelectedForCompare(next);
+  };
   const [emailModalState, setEmailModalState] = useState<EmailModalState>('closed');
   const [selectedVenueForEmail, setSelectedVenueForEmail] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState<string>('');
@@ -1573,17 +1601,29 @@ Sarah & John`;
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="font-serif text-xl">All Venues</CardTitle>
-                {state.venues.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowShareModal(true)}
-                    className="gap-2 rounded-full border-border text-muted-foreground hover:bg-muted"
-                  >
-                    <Share2 className="h-4 w-4" />
-                    Share list
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedForCompare.size >= 2 && (
+                    <Button
+                      size="sm"
+                      onClick={() => router.push(`/compare?ids=${Array.from(selectedForCompare).join(',')}`)}
+                      className="gap-2 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <GitCompareArrows className="h-4 w-4" />
+                      Compare ({selectedForCompare.size})
+                    </Button>
+                  )}
+                  {state.venues.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowShareModal(true)}
+                      className="gap-2 rounded-full border-border text-muted-foreground hover:bg-muted"
+                    >
+                      <Share2 className="h-4 w-4" />
+                      Share list
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -1610,6 +1650,8 @@ Sarah & John`;
                       onAddResponse={handleAddResponse}
                       onRemoveVenue={handleRemoveVenue}
                       onSendFollowUp={handleSendFollowUp}
+                      isSelected={selectedForCompare.has(venue.id)}
+                      onToggleSelect={toggleCompareSelection}
                     />
                   ))}
                 </TabsContent>
@@ -1618,13 +1660,15 @@ Sarah & John`;
                   <TabsContent key={status} value={status} className="space-y-3">
                     {getVenuesByStatus(status).map((venue) => (
                       <VenueRow
-                      key={venue.id}
-                      venue={venue}
-                      onAllowContact={handleAllowContact}
-                      onAddResponse={handleAddResponse}
-                      onRemoveVenue={handleRemoveVenue}
-                      onSendFollowUp={handleSendFollowUp}
-                    />
+                        key={venue.id}
+                        venue={venue}
+                        onAllowContact={handleAllowContact}
+                        onAddResponse={handleAddResponse}
+                        onRemoveVenue={handleRemoveVenue}
+                        onSendFollowUp={handleSendFollowUp}
+                        isSelected={selectedForCompare.has(venue.id)}
+                        onToggleSelect={toggleCompareSelection}
+                      />
                     ))}
                   </TabsContent>
                 ))}
