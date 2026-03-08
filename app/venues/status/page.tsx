@@ -437,15 +437,18 @@ Sarah & John`;
     if (!selectedVenueForEmail || !selectedVenue) return;
 
     try {
-      // Send the email to your email (demo mode - not spamming real venues)
+      const venueEmail = selectedVenue.contact?.email;
+      if (!venueEmail) {
+        alert('No email address found for this venue. Please add one by clicking the edit icon next to the email on the dashboard.');
+        return;
+      }
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: 'saurabhbains@berkeley.edu',
-          subject: `[DEMO] Wedding Inquiry - ${selectedVenue.name}`,
+          to: venueEmail,
+          subject: `Wedding Inquiry - ${selectedVenue.name}`,
           emailBody: emailDraft
-          // from: defaults to onboarding@resend.dev (verified domain)
         })
       });
 
@@ -456,7 +459,7 @@ Sarah & John`;
           contactAllowed: true,
           status: 'awaiting_response' as VenueStatus
         });
-        alert('Email sent successfully to saurabhbains@berkeley.edu!');
+        alert(`Email sent successfully to ${venueEmail}`);
       } else {
         alert('Failed to send email: ' + (data.error || 'Unknown error'));
       }
@@ -477,15 +480,18 @@ Sarah & John`;
     if (!selectedVenueForEmail || !selectedVenue) return;
 
     try {
-      // Send the email to your email (demo mode - not spamming real venues)
+      const venueEmail = selectedVenue.contact?.email;
+      if (!venueEmail) {
+        alert('No email address found for this venue. Please add one by clicking the edit icon next to the email on the dashboard.');
+        return;
+      }
       const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: 'saurabhbains@berkeley.edu',
-          subject: `[DEMO] Wedding Inquiry - ${selectedVenue.name}`,
+          to: venueEmail,
+          subject: `Wedding Inquiry - ${selectedVenue.name}`,
           emailBody: emailDraft
-          // from: defaults to onboarding@resend.dev (verified domain)
         })
       });
 
@@ -496,7 +502,7 @@ Sarah & John`;
           contactAllowed: true,
           status: 'awaiting_response' as VenueStatus
         });
-        alert('Email sent successfully to saurabhbains@berkeley.edu!');
+        alert(`Email sent successfully to ${venueEmail}`);
       } else {
         alert('Failed to send email: ' + (data.error || 'Unknown error'));
       }
@@ -664,7 +670,7 @@ Sarah & John`;
 
       if (sendData.success) {
         alert(
-          `✓ Follow-up email sent successfully!\n\nVenue: ${venue.name}\nRecipient: saurabhbains@berkeley.edu (demo)\n\nThe venue will receive a polite request for the missing information.`
+          `✓ Follow-up email sent successfully!\n\nVenue: ${venue.name}\nRecipient: ${venue.contact?.email}`
         );
       } else {
         alert(`Failed to send follow-up email: ${sendData.error || 'Unknown error'}`);
