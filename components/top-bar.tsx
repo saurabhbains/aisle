@@ -23,7 +23,6 @@ interface TopBarProps {
   showBack?: boolean;
   backHref?: string;
   showProfile?: boolean;
-  showSettings?: boolean;
   className?: string;
 }
 
@@ -32,7 +31,6 @@ export function TopBar({
   showBack = false,
   backHref,
   showProfile = true,
-  showSettings = false,
   className,
 }: TopBarProps) {
   const pathname = usePathname();
@@ -91,12 +89,10 @@ export function TopBar({
       </nav>
 
       <div className="flex items-center gap-2">
-        {showSettings && (
-          <Button variant="ghost" size="icon" className="h-9 w-9">
-            <Settings className="h-5 w-5" />
-            <span className="sr-only">Settings</span>
-          </Button>
-        )}
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => router.push('/settings')}>
+          <Settings className="h-5 w-5" />
+          <span className="sr-only">Settings</span>
+        </Button>
         {showProfile && (
           <AlertDialog>
             <AlertDialogTrigger asChild>

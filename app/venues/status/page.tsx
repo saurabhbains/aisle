@@ -1021,7 +1021,7 @@ Sarah & John`;
 
   return (
     <div className="flex min-h-screen flex-col bg-background overflow-x-hidden">
-      <TopBar showSettings />
+      <TopBar />
 
       {/* Email Approval Modal */}
       {emailModalState !== 'closed' && selectedVenue && (
