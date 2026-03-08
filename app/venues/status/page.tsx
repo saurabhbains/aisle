@@ -377,6 +377,33 @@ export default function StatusDashboardPage() {
     }
     setSelectedForCompare(next);
   };
+
+  const [showSaveListModal, setShowSaveListModal] = useState(false);
+  const [saveListName, setSaveListName] = useState('');
+  const [savingList, setSavingList] = useState(false);
+  const [saveListSuccess, setSaveListSuccess] = useState(false);
+
+  const handleSaveList = async () => {
+    if (!saveListName.trim() || selectedForCompare.size === 0) return;
+    setSavingList(true);
+    const res = await fetch('/api/lists', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: saveListName.trim(), venue_ids: Array.from(selectedForCompare) }),
+    });
+    const data = await res.json();
+    if (data.list) {
+      setSaveListSuccess(true);
+      setTimeout(() => {
+        setShowSaveListModal(false);
+        setSaveListName('');
+        setSaveListSuccess(false);
+        setSelectedForCompare(new Set());
+      }, 1500);
+    }
+    setSavingList(false);
+  };
+
   const [emailModalState, setEmailModalState] = useState<EmailModalState>('closed');
   const [selectedVenueForEmail, setSelectedVenueForEmail] = useState<string | null>(null);
   const [emailDraft, setEmailDraft] = useState<string>('');
@@ -1185,6 +1212,44 @@ Sarah & John`;
         </div>
       )}
 
+      {/* Save as List Modal */}
+      {showSaveListModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={() => setShowSaveListModal(false)} />
+          <div className="relative z-10 w-full max-w-sm rounded-2xl bg-card p-6 shadow-xl">
+            {saveListSuccess ? (
+              <div className="text-center py-4">
+                <p className="font-serif text-xl font-semibold text-foreground">List saved!</p>
+                <p className="mt-1 text-sm text-muted-foreground">You can view it in My Lists.</p>
+              </div>
+            ) : (
+              <>
+                <h2 className="mb-1 font-serif text-xl font-semibold text-foreground">Save as List</h2>
+                <p className="mb-4 text-sm text-muted-foreground">{selectedForCompare.size} venue{selectedForCompare.size !== 1 ? 's' : ''} selected</p>
+                <input
+                  autoFocus
+                  value={saveListName}
+                  onChange={(e) => setSaveListName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveList(); if (e.key === 'Escape') setShowSaveListModal(false); }}
+                  placeholder="e.g. Top picks, Barn venues..."
+                  className="mb-4 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+                />
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setShowSaveListModal(false)} className="flex-1 rounded-full">Cancel</Button>
+                  <Button
+                    onClick={handleSaveList}
+                    disabled={!saveListName.trim() || savingList}
+                    className="flex-1 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {savingList ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {showResponseModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm" onClick={handleCancelResponse} />
@@ -1610,6 +1675,16 @@ Sarah & John`;
                   >
                     My Lists
                   </Button>
+                  {selectedForCompare.size > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowSaveListModal(true)}
+                      className="gap-2 rounded-full"
+                    >
+                      Save as List ({selectedForCompare.size})
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant={selectedForCompare.size >= 2 ? 'default' : 'outline'}

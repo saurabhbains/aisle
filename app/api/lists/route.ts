@@ -21,12 +21,12 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { name } = await req.json();
+  const { name, venue_ids } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: 'Name required' }, { status: 400 });
 
   const { data, error } = await supabase
     .from('venue_lists')
-    .insert({ user_id: user.id, name: name.trim(), venue_ids: [] })
+    .insert({ user_id: user.id, name: name.trim(), venue_ids: venue_ids ?? [] })
     .select()
     .single();
 
