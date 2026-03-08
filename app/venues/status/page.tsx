@@ -20,7 +20,8 @@ import {
   Pencil,
   GitCompareArrows,
   CheckSquare,
-  Square
+  Square,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -352,9 +353,23 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
             )}
           </div>
         </div>
-        <Link href={`/venues/${venue.id}`}>
-          <ChevronRight className="h-5 w-5 flex-shrink-0 text-muted-foreground" />
-        </Link>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm(`Are you sure you want to remove ${venue.name} from your list?`)) {
+                onRemoveVenue?.(venue.id);
+              }
+            }}
+            className="rounded-full p-1.5 text-muted-foreground/40 hover:bg-red-50 hover:text-red-500 transition-colors"
+            title="Remove venue"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          <Link href={`/venues/${venue.id}`}>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </Link>
+        </div>
       </div>
     </div>
   );
