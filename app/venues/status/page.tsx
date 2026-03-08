@@ -83,11 +83,11 @@ function VenueRow({ venue, onAllowContact, onAddResponse, onRemoveVenue, onSendF
           />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <Link href={`/venues/${venue.id}`} className="hover:underline">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link href={`/venues/${venue.id}`} className="min-w-0 hover:underline">
               <h3 className="truncate font-serif text-lg font-semibold">{venue.name}</h3>
             </Link>
-            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <div className="flex flex-shrink-0 items-center gap-1 text-sm text-muted-foreground">
               <Star className="h-3.5 w-3.5 fill-primary text-primary" />
               {venue.matchScore}%
             </div>
