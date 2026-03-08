@@ -41,6 +41,7 @@ ${niceToHaves.length > 0 ? niceToHaves.join('\n') : 'None'}`
     ],
     response_format: { type: 'json_object' },
     max_tokens: 4000,
+    temperature: 0.3,
   });
   const data = JSON.parse(completion.choices[0].message.content || '{}');
   return data.venues || [];

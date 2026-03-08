@@ -8,19 +8,33 @@ export async function GET(req: NextRequest) {
   const name = searchParams.get('name');
   const location = searchParams.get('location');
   const photoRefsParam = searchParams.get('photoRefs');
+  const proxyRef = searchParams.get('proxyRef'); // single ref to proxy
+  const size = searchParams.get('size') || '1600';
 
   if (!GOOGLE_PLACES_API_KEY) {
     return NextResponse.json({ photos: [] });
   }
 
+  // Proxy mode — fetch the actual image and stream it back
+  // This avoids CORS/redirect issues in the browser
+  if (proxyRef) {
+    const photoUrl = `${PLACES_BASE}/photo?maxwidth=${size}&photoreference=${proxyRef}&key=${GOOGLE_PLACES_API_KEY}`;
+    const res = await fetch(photoUrl, { redirect: 'follow' });
+    const blob = await res.blob();
+    return new NextResponse(blob, {
+      headers: {
+        'Content-Type': res.headers.get('content-type') || 'image/jpeg',
+        'Cache-Control': 'public, max-age=86400',
+      },
+    });
+  }
+
   try {
     let photoRefs: string[] = [];
 
-    // If we already have photo refs stored, use them directly
     if (photoRefsParam) {
       photoRefs = photoRefsParam.split(',').filter(Boolean);
     } else if (name) {
-      // Otherwise look up the place
       const query = encodeURIComponent(`${name} wedding venue ${location || ''}`);
       const findUrl = `${PLACES_BASE}/findplacefromtext/json?input=${query}&inputtype=textquery&fields=place_id&key=${GOOGLE_PLACES_API_KEY}`;
       const findRes = await fetch(findUrl);
@@ -35,23 +49,14 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Resolve each photo ref to a final googleusercontent.com URL server-side
-    const photos = await Promise.all(
-      photoRefs.map(async (ref) => {
-        try {
-          const placesUrl = `${PLACES_BASE}/photo?maxwidth=1600&photoreference=${ref}&key=${GOOGLE_PLACES_API_KEY}`;
-          const res = await fetch(placesUrl, { redirect: 'follow' });
-          const finalUrl = res.url; // resolved lh3.googleusercontent.com URL
-          // Build thumbnail by replacing the size param
-          const thumbnailUrl = finalUrl.replace(/s1600-w\d+/, 's400-w400');
-          return { url: finalUrl, thumbnail: thumbnailUrl };
-        } catch {
-          return null;
-        }
-      })
-    );
+    // Return proxy URLs — browser loads images via our own API, no redirect issues
+    const baseUrl = req.nextUrl.origin;
+    const photos = photoRefs.map((ref) => ({
+      url: `${baseUrl}/api/venue-photos?proxyRef=${encodeURIComponent(ref)}&size=1600`,
+      thumbnail: `${baseUrl}/api/venue-photos?proxyRef=${encodeURIComponent(ref)}&size=400`,
+    }));
 
-    return NextResponse.json({ photos: photos.filter(Boolean) });
+    return NextResponse.json({ photos });
   } catch (error: any) {
     console.error('Venue photos error:', error);
     return NextResponse.json({ photos: [] });
