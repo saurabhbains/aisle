@@ -1142,6 +1142,13 @@ Sarah & John`;
                 <p className="mt-3 text-muted-foreground">
                   Your email to {selectedVenue.name} is ready to be sent
                 </p>
+                <div className="mt-4 rounded-lg bg-muted px-4 py-3 text-sm">
+                  {selectedVenue.contact?.email ? (
+                    <span>Sending to <strong>{selectedVenue.contact.email}</strong></span>
+                  ) : (
+                    <span className="text-destructive">⚠️ No email address on file for this venue. Add one before sending.</span>
+                  )}
+                </div>
                 <div className="mt-8 flex justify-center gap-4">
                   <Button
                     onClick={handleSendEmail}
