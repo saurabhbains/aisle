@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Calendar, Heart, Mail, MapPin, TrendingUp, Users, GitCompareArrows } from 'lucide-react';
+import { Calendar, Heart, Mail, MapPin, TrendingUp, GitCompareArrows, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { TopBar } from '@/components/top-bar';
@@ -11,9 +12,20 @@ import { useApp } from '@/lib/context';
 export default function DashboardPage() {
   const router = useRouter();
   const { state } = useApp();
+  const [selectedVenues, setSelectedVenues] = useState<Set<string>>(new Set());
 
   // Get recent venues (limit to 3)
   const recentVenues = state.venues.slice(0, 3);
+
+  const toggleVenueSelection = (venueId: string) => {
+    const next = new Set(selectedVenues);
+    if (next.has(venueId)) {
+      next.delete(venueId);
+    } else if (next.size < 3) {
+      next.add(venueId);
+    }
+    setSelectedVenues(next);
+  };
 
   // Calculate stats
   const callsScheduled = state.venues.filter(v => v.status === 'call_scheduled').length;
@@ -86,7 +98,7 @@ export default function DashboardPage() {
             <h2 className="mb-4 font-serif text-xl font-semibold text-foreground">
               Quick Actions
             </h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Button
                 variant="outline"
                 className="h-auto flex-col gap-3 p-6"
@@ -119,14 +131,6 @@ export default function DashboardPage() {
                 <Mail className="h-8 w-8 text-primary" />
                 <span className="text-sm font-medium">Send Emails</span>
               </Button>
-              <Button
-                variant="outline"
-                className="h-auto flex-col gap-3 p-6"
-                onClick={() => router.push('/venues')}
-              >
-                <GitCompareArrows className="h-8 w-8 text-primary" />
-                <span className="text-sm font-medium">Compare Venues</span>
-              </Button>
             </div>
           </div>
 
@@ -134,25 +138,55 @@ export default function DashboardPage() {
           {recentVenues.length > 0 && (
             <div>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className="font-serif text-xl font-semibold text-foreground">
-                  Your Top Matches
-                </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => router.push('/venues')}
-                >
-                  View All
-                </Button>
+                <div>
+                  <h2 className="font-serif text-xl font-semibold text-foreground">
+                    Your Top Matches
+                  </h2>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    Select 2–3 venues to compare them side by side
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {selectedVenues.size >= 2 && (
+                    <Button
+                      size="sm"
+                      onClick={() => router.push(`/compare?ids=${Array.from(selectedVenues).join(',')}`)}
+                      className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <GitCompareArrows className="h-4 w-4" />
+                      Compare ({selectedVenues.size})
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/venues')}
+                  >
+                    View All
+                  </Button>
+                </div>
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {recentVenues.map((venue) => (
-                  <VenueCard
-                    key={venue.id}
-                    venue={venue}
-                    variant="default"
-                    showActions={true}
-                  />
+                  <div key={venue.id} className="relative">
+                    <div className="absolute left-3 top-3 z-10">
+                      <button
+                        onClick={() => toggleVenueSelection(venue.id)}
+                        className="flex h-6 w-6 items-center justify-center rounded bg-white shadow-md transition-colors hover:bg-gray-50"
+                      >
+                        {selectedVenues.has(venue.id) ? (
+                          <CheckSquare className="h-5 w-5 text-primary" />
+                        ) : (
+                          <Square className="h-5 w-5 text-gray-400" />
+                        )}
+                      </button>
+                    </div>
+                    <VenueCard
+                      venue={venue}
+                      variant="default"
+                      showActions={true}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
