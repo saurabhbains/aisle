@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { Mic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TopBar } from '@/components/top-bar';
@@ -186,13 +185,11 @@ export default function InitialVenueListPage() {
                   >
                     {/* Venue Image */}
                     <div className="relative h-40 w-full flex-shrink-0 overflow-hidden rounded-lg sm:h-24 sm:w-24">
-                      <Image
+                      <img
                         src={venue.imageUrl}
                         alt={venue.name}
-                        fill
-                        sizes="(max-width: 640px) 100vw, 96px"
                         className={cn(
-                          'object-cover',
+                          'h-full w-full object-cover',
                           isQualifiedOut && 'grayscale'
                         )}
                       />
