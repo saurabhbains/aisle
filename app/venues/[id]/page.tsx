@@ -1,18 +1,21 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  MapPin, 
-  Users, 
-  Star, 
-  Phone, 
-  Calendar, 
+import {
+  MapPin,
+  Users,
+  Star,
+  Phone,
+  Calendar,
   Mail,
   CheckCircle2,
   Clock,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +45,20 @@ export default function VenueDetailPage({ params }: VenueDetailPageProps) {
   const [criteriaChanged, setCriteriaChanged] = useState(false);
   const [notes, setNotes] = useState(venue?.notes || '');
   const [notesSaved, setNotesSaved] = useState(false);
+  const [photos, setPhotos] = useState<{ url: string; thumbnail: string }[]>([]);
+  const [activePhoto, setActivePhoto] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+
+  useEffect(() => {
+    if (!venue) return;
+    const params = new URLSearchParams({ name: venue.name, location: venue.location });
+    if (venue.googlePhotoRefs?.length) {
+      params.set('photoRefs', venue.googlePhotoRefs.join(','));
+    }
+    fetch(`/api/venue-photos?${params}`)
+      .then(r => r.json())
+      .then(d => { if (d.photos?.length) setPhotos(d.photos); });
+  }, [venue?.id]);
 
   // Call booking handlers
   const handleOpenCallBooking = () => {
@@ -375,12 +392,87 @@ export default function VenueDetailPage({ params }: VenueDetailPageProps) {
 
       <main className="flex-1 px-6 py-8">
         <div className="mx-auto max-w-4xl">
-          {/* Hero Section */}
-          <div className="mb-8 overflow-hidden rounded-xl bg-muted">
-            <div className="flex h-64 items-center justify-center">
+          {/* Photo Gallery */}
+          {photos.length > 0 ? (
+            <div className="mb-8">
+              {/* Main photo */}
+              <div
+                className="relative mb-2 h-80 w-full cursor-pointer overflow-hidden rounded-xl bg-muted sm:h-96"
+                onClick={() => setLightboxOpen(true)}
+              >
+                <img
+                  src={photos[activePhoto].url}
+                  alt={venue.name}
+                  className="h-full w-full object-cover transition-opacity duration-300"
+                />
+                {photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActivePhoto(p => (p - 1 + photos.length) % photos.length); }}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setActivePhoto(p => (p + 1) % photos.length); }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                    <div className="absolute bottom-3 right-3 rounded-full bg-black/50 px-2 py-1 text-xs text-white">
+                      {activePhoto + 1} / {photos.length}
+                    </div>
+                  </>
+                )}
+              </div>
+              {/* Thumbnails */}
+              {photos.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {photos.map((photo, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActivePhoto(i)}
+                      className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all ${activePhoto === i ? 'border-primary' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                    >
+                      <img src={photo.thumbnail} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="mb-8 flex h-64 items-center justify-center overflow-hidden rounded-xl bg-muted">
               <MapPin className="h-16 w-16 text-muted-foreground" />
             </div>
-          </div>
+          )}
+
+          {/* Lightbox */}
+          {lightboxOpen && photos.length > 0 && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90" onClick={() => setLightboxOpen(false)}>
+              <button className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20" onClick={() => setLightboxOpen(false)}>
+                <X className="h-6 w-6" />
+              </button>
+              <button
+                className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); setActivePhoto(p => (p - 1 + photos.length) % photos.length); }}
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <img
+                src={photos[activePhoto].url}
+                alt={venue.name}
+                className="max-h-[90vh] max-w-[90vw] rounded-lg object-contain"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <button
+                className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white/10 p-2 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); setActivePhoto(p => (p + 1) % photos.length); }}
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+              <div className="absolute bottom-4 text-sm text-white/70">{activePhoto + 1} / {photos.length}</div>
+            </div>
+          )}
 
           {/* Header Info */}
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -394,9 +486,23 @@ export default function VenueDetailPage({ params }: VenueDetailPageProps) {
                 <span>{venue.location}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
-              <Star className="h-5 w-5 fill-primary text-primary" />
-              <span className="font-semibold">{venue.matchScore}% Match</span>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
+                <Star className="h-5 w-5 fill-primary text-primary" />
+                <span className="font-semibold">{venue.matchScore}% Match</span>
+              </div>
+              {venue.googleRating && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span>{venue.googleRating} on Google</span>
+                </div>
+              )}
+              {venue.googleMapsUrl && (
+                <a href={venue.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" />
+                  View on Google Maps
+                </a>
+              )}
             </div>
           </div>
 

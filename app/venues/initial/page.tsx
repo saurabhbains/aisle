@@ -199,8 +199,8 @@ export default function InitialVenueListPage() {
                     </div>
 
                     {/* Venue Info */}
-                    <div className="flex flex-1 flex-col gap-2">
-                      <h3 className="font-serif text-lg font-semibold text-foreground">
+                    <div className="flex flex-1 flex-col gap-2 cursor-pointer" onClick={() => router.push(`/venues/${venue.id}`)}>
+                      <h3 className="font-serif text-lg font-semibold text-foreground hover:text-primary transition-colors">
                         {venue.name}
                       </h3>
                       <p className="text-sm text-muted-foreground">{venue.location}</p>

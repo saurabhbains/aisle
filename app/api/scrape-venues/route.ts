@@ -25,7 +25,7 @@ For each venue return:
 - estimatedPriceMax: estimated max price in GBP
 - type: one of country_estate, barn, hotel, garden, castle, vineyard
 
-Return JSON: { "venues": [...] } with 15-20 venues sorted by niceToHaveScore descending.
+Return JSON: { "venues": [...] } with AT LEAST 25-30 venues sorted by niceToHaveScore descending. More is better — return as many real matching venues as you know.
 Only return venues that satisfy ALL must-haves.`
       },
       {
@@ -57,7 +57,7 @@ async function findPlaceId(name: string, location: string): Promise<string | nul
 
 // Step 3: Google Places Details — get full data from place_id
 async function getPlaceDetails(placeId: string) {
-  const fields = 'name,formatted_address,formatted_phone_number,website,photos,rating,user_ratings_total,url,geometry';
+  const fields = 'name,formatted_address,formatted_phone_number,website,photos,rating,user_ratings_total,url';
   const url = `${PLACES_BASE}/details/json?place_id=${placeId}&fields=${fields}&key=${GOOGLE_PLACES_API_KEY}`;
   const res = await fetch(url);
   const data = await res.json();
@@ -93,8 +93,12 @@ export async function POST(request: NextRequest) {
           }
 
           // Merge GPT reasoning with Google Places data
-          const photoUrl = placeDetails?.photos?.[0]?.photo_reference
-            ? getPhotoUrl(placeDetails.photos[0].photo_reference)
+          const allPhotoRefs = (placeDetails?.photos || [])
+            .map((p: any) => p.photo_reference)
+            .filter(Boolean);
+
+          const photoUrl = allPhotoRefs.length > 0
+            ? getPhotoUrl(allPhotoRefs[0], 1200)
             : 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=300&fit=crop';
 
           const website = placeDetails?.website || null;
@@ -131,6 +135,7 @@ export async function POST(request: NextRequest) {
             niceToHavesMatched: v.niceToHavesMatched || [],
             googleRating: rating,
             googleMapsUrl: placeDetails?.url || null,
+            googlePhotoRefs: allPhotoRefs,
             contact: {
               name: 'Events Team',
               email: emailGuess || '',

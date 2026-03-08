@@ -69,6 +69,9 @@ export interface Venue {
   contactAllowed?: boolean;
   failedCriteria?: string[];
   notes?: string;
+  googleRating?: number;
+  googleMapsUrl?: string;
+  googlePhotoRefs?: string[];
   lastReply?: {
     from: string;
     subject: string;
