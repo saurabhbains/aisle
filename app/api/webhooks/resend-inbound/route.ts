@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/ai';
 import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getSupabaseAdmin() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SECRET_KEY;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!
-);
+  if (!url || !serviceKey) {
+    throw new Error('Supabase admin credentials are not configured');
+  }
+
+  return createClient(url, serviceKey);
+}
 
 export async function POST(request: NextRequest) {
   try {
+    const openai = getOpenAIClient();
+    const supabase = getSupabaseAdmin();
     const payload = await request.json();
     console.log('Inbound email webhook received:', payload.type);
 

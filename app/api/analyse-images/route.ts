@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { getOpenAIClient } from '@/lib/ai';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,6 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No images provided' }, { status: 400 });
     }
 
+    const openai = getOpenAIClient();
     const imageMessages = await Promise.all(
       files.map(async (file) => {
         const buffer = await file.arrayBuffer();

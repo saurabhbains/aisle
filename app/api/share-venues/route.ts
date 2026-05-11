@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(request: NextRequest) {
   try {
     const { toEmail, venues, senderName } = await request.json();
@@ -43,6 +41,7 @@ export async function POST(request: NextRequest) {
       </div>
     `;
 
+    const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
       from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
       to: toEmail,

@@ -1,140 +1,92 @@
-# Aisle — AI-Powered Wedding Venue Search
+# Aisle
 
-**Aisle** is an AI assistant that takes the pain out of finding a wedding venue. Instead of spending weeks emailing dozens of venues, chasing PDFs, and tracking spreadsheets, Aisle does it all for you — from discovering venues to reading their replies and keeping your dashboard up to date.
+AI-powered wedding venue search and outreach.
 
-Live at **[www.aisle-weddings.com](https://www.aisle-weddings.com)**
+Aisle helps couples turn a vague wedding brief into a managed venue pipeline: capture criteria, discover matching venues, generate inquiry emails, parse venue replies and brochures, compare options, and share shortlists.
 
----
+Live demo: https://aisle-xi.vercel.app
 
 ## The Problem
 
-**£1.9 billion of productive time is wasted every year** on copy-paste emails and unanswered inboxes.
+Wedding venue search is still a manual operations problem. Couples bounce between marketplaces, venue websites, PDFs, email threads, spreadsheets, and family WhatsApp debates. The hard part is not finding a list of venues; it is coordinating the back-and-forth until the real options are clear.
 
-There are **265,000 weddings in the UK every year**. The average couple spends **528 hours** planning — 13 full working weeks — with a huge chunk of that time going on venue research alone:
+Aisle focuses on the communication and decision layer:
 
-- You have to contact 50–100+ venues just to get basic pricing information
-- Every venue sends a 10–20 page PDF brochure you have to read manually
-- You ask the same questions over and over across dozens of email threads
-- There's no central place to track what you've asked, what they've said, and what's still missing
+- Convert text, voice, and visual inspiration into structured criteria
+- Find venues that match hard requirements and rank by preferences
+- Generate personalized venue emails
+- Track replies, missing information, notes, and follow-ups
+- Compare venues side by side
+- Share lists with a partner, family member, or planner
 
-The UK wedding industry is worth **£14.7 billion**. It's the second biggest purchase most couples ever make — yet the process of finding a venue is still completely manual.
+## Product Highlights
 
-Existing platforms like Hitched and Bridebook are great for discovery but do nothing to automate the back-and-forth. Wedding planners solve the problem but cost thousands of pounds. Aisle sits in the middle — the intelligence of a wedding planner, without the price tag.
+| Area | What is built |
+| --- | --- |
+| Criteria capture | Text, voice transcription, and image-vibe analysis |
+| Venue discovery | AI search plus Google Places enrichment for addresses, ratings, websites, and photos |
+| Smart ranking | Hard criteria filtering and soft preference scoring |
+| Email workflow | Batch inquiry generation, review, send flow, and follow-up generation |
+| Reply handling | Resend inbound webhook, AI summary extraction, reply history, and missing-info updates |
+| Venue workspace | Dashboard, venue detail pages, notes, call transcripts, status tracking, and editable contact data |
+| Comparison | 2-3 venue side-by-side comparison with value highlights |
+| Lists and sharing | Custom lists, email sharing, and Excel export |
+| Auth and persistence | Supabase auth and per-user venue/criteria storage |
 
----
+## How It Works
 
-## What Aisle Does
-
-### 1. Capture Your Criteria
-Tell Aisle what you're looking for — by typing, talking, or uploading inspiration images. Aisle automatically organises your input into:
-- **Must-haves** — deal-breakers like location, guest count, budget, and date
-- **Nice-to-haves** — preferences like outdoor space, rustic aesthetic, or on-site catering
-- **Vibe** — if you upload Pinterest screenshots, Aisle analyses them and extracts aesthetic keywords to search for venues with a similar feel
-
-### 2. Find Venues
-Based on your criteria, Aisle searches for up to 30 matching venues — filtering by must-haves and ranking by how many nice-to-haves each venue satisfies. The best overall matches appear at the top.
-
-Venue discovery uses a two-stage pipeline:
-- **GPT-4o** reasons about your criteria and identifies real, well-known matching venues
-- **Google Places API** enriches each result with verified address, phone number, website, Google rating, and up to 10 high-resolution photos
-
-### 3. Email Venues Automatically
-Aisle generates a personalised email to each venue on your behalf. You review and approve it, then send. Emails are sent from `noreply@aisle-weddings.com` with a reply-to of `reply@aisle-weddings.com` so all venue responses are captured automatically.
-
-### 4. Parse Replies and PDFs
-When a venue replies — whether with plain text or a PDF brochure attached — Aisle reads it using GPT-4o and automatically extracts:
-- Pricing
-- Availability
-- Capacity
-- Catering options
-- Accommodation
-- Contact details
-
-The dashboard updates immediately. Missing information tags disappear as answers come in.
-
-### 5. Track Everything on Your Dashboard
-Your dashboard shows all venues in one place with:
-- Status (Awaiting Response, Missing Info, Shortlisted, etc.)
-- Match score based on your criteria
-- A green "Replied" tag showing how many replies have been received — click it to read the full reply history and AI summaries
-- Missing information still needed
-- Editable contact emails per venue
-
-### 6. Share Your List
-Send your shortlist of venues to anyone — a partner, family member, or wedding planner — with one click. They receive a nicely formatted email with venue names and website links.
-
----
-
-## Key Features
-
-| Feature | Description |
-|---------|-------------|
-| Voice input | Dictate your requirements — transcript auto-parses into criteria |
-| Image vibe analysis | Upload Pinterest screenshots → AI extracts aesthetic keywords |
-| Smart ranking | Must-haves filter venues; nice-to-haves sort them |
-| GPT + Google Places | AI finds venues, Google enriches with verified data and photos |
-| Venue photo gallery | Up to 10 high-res photos per venue with thumbnail strip and fullscreen lightbox |
-| Venue detail page | Full venue profile with photos, stats, contact info, Google rating and Maps link |
-| Side-by-side comparison | Select 2–3 venues and compare all attributes in a table, best value highlighted |
-| Custom lists | Create named subsets of your venues (e.g. "Top picks", "Barn venues") |
-| Share list | Email any saved list to a partner, planner, or family member |
-| Download Excel | Export any list as .xlsx with all venue attributes |
-| Auto email parsing | Venue replies update the dashboard automatically |
-| PDF parsing | Attached brochures are read and extracted by GPT-4o |
-| Email threading | Follow-up emails reply on the same thread as the venue's original response |
-| Full reply history | Every reply stored and viewable in a popup |
-| Recipient confirmation | See exactly which email address will receive each outgoing email before sending |
-| Remove venues | Delete venues from your list with confirmation prompt |
-| Editable contact emails | Manually update venue email addresses from the dashboard |
-| Notes & transcripts | Per-venue notes section — paste call transcripts, observations, anything |
-| Settings | Name, reply-to email, wedding date, guest count stored per account |
-| Per-user data | Everything tied to your account — log in from any device |
-
----
-
-## Market Opportunity
-
-| | |
-|--|--|
-| **UK wedding industry** | £14.7B |
-| **Global wedding industry** | $650B+ |
-| **UK weddings per year** | 265,000 |
-| **Average planning time** | 528 hours per couple |
-| **Productive time wasted annually** | £1.9B |
-
-Aisle's beachhead is the UK wedding market. The same model extends to real estate, events, and hospitality — a further **$3 trillion+** global opportunity.
-
-**Why now:** No AI-native competitor exists in this space. Hitched and Bridebook solve discovery. Nobody solves the communication, parsing, and coordination layer. That's the gap Aisle fills.
-
-**Business model:**
-- Couples pay **£19/month** (average 5-month subscription = £95 LTV)
-- Venues pay **£199/month** for higher-intent leads than Hitched
-- Vendors pay **£79/month**
-- Target ARR by Year 3: **£3.3M**
-
----
+```mermaid
+flowchart LR
+  User["Couple / Planner"] --> Criteria["Criteria capture"]
+  Criteria --> Search["AI venue discovery"]
+  Search --> Places["Google Places enrichment"]
+  Places --> Dashboard["Venue dashboard"]
+  Dashboard --> Email["Generated venue emails"]
+  Email --> Resend["Resend outbound + inbound"]
+  Resend --> Parser["AI reply/PDF parser"]
+  Parser --> Dashboard
+  Dashboard --> Lists["Compare, shortlist, share, export"]
+```
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|------------|
-| Frontend | Next.js 16, Tailwind CSS, TypeScript |
-| Auth & Database | Supabase (PostgreSQL + Auth) |
-| AI | OpenAI GPT-4o (venue search, email parsing, image analysis, PDF extraction) |
-| Venue Data | Google Places API (verified addresses, photos, ratings) |
-| Email | Resend (sending + inbound webhooks) |
+| --- | --- |
+| App | Next.js 16, React 19, TypeScript |
+| Styling | Tailwind CSS, shadcn/Radix UI primitives, lucide-react |
+| Auth and data | Supabase Auth, PostgreSQL, RLS |
+| AI | OpenAI for criteria parsing, venue discovery, image analysis, email generation, and reply extraction |
+| Venue data | Google Places API |
+| Email | Resend outbound email and inbound webhook processing |
+| Export | `xlsx` for venue list downloads |
 | Hosting | Vercel |
-| Domain | Cloudflare + aisle-weddings.com |
 
----
+## Repository Structure
 
-## Getting Started (Local Development)
+```text
+aisle/
+|-- app/                    # Next.js routes and API handlers
+|   |-- api/                # AI, email, venue, webhook, and parsing routes
+|   |-- criteria/           # Criteria capture and recap flow
+|   |-- venues/             # Venue dashboard, details, status, booking flows
+|   `-- dashboard/          # Main workspace
+|-- components/             # Product UI components
+|-- components/ui/          # Shared UI primitives
+|-- lib/                    # AI, email, Supabase, matching, types, exports
+|-- hooks/                  # Client hooks
+|-- public/samples/         # Demo assets
+`-- supabase/schema.sql     # Local database bootstrap
+```
+
+## Getting Started
 
 ### Prerequisites
-- Node.js 18+
-- A Supabase project
+
+- Node.js 20+
+- Supabase project
 - OpenAI API key
 - Resend API key
+- Google Places API key
 
 ### Setup
 
@@ -142,102 +94,63 @@ Aisle's beachhead is the UK wedding market. The same model extends to real estat
 git clone https://github.com/saurabhbains/aisle.git
 cd aisle
 npm install
+cp .env.example .env.local
+npm run dev
 ```
 
-Create a `.env.local` file:
+Then run the SQL in `supabase/schema.sql` inside the Supabase SQL editor.
+
+The app starts on `http://localhost:3000`.
+
+### Environment Variables
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
-SUPABASE_SECRET_KEY=your_supabase_secret_key
+SUPABASE_SECRET_KEY=your_supabase_service_role_key
 OPENAI_API_KEY=your_openai_key
 RESEND_API_KEY=your_resend_key
 GOOGLE_PLACES_API_KEY=your_google_places_key
 EMAIL_FROM=noreply@yourdomain.com
 ```
 
-Run the Supabase SQL setup:
+## Demo Notes
 
-```sql
-create table public.user_criteria (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  criteria jsonb not null default '[]',
-  updated_at timestamp with time zone default now()
-);
+The repository contains both production-shaped flows and demo-safe paths:
 
-create table public.user_venues (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  venues jsonb not null default '[]',
-  updated_at timestamp with time zone default now()
-);
+- Batch email send can run in demo mode to avoid contacting real venues accidentally.
+- The sample PDF flow includes realistic fallback data for reliable demos.
+- Venue discovery can fall back to mock venue data when no external search results are provided.
 
-alter table public.user_criteria enable row level security;
-alter table public.user_venues enable row level security;
+These choices make the project easy to demo while keeping the architecture pointed toward a real product.
 
-alter table public.user_criteria add constraint user_criteria_user_id_key unique (user_id);
-alter table public.user_venues add constraint user_venues_user_id_key unique (user_id);
+## Production Readiness Notes
 
-create policy "Users can manage their own criteria" on public.user_criteria for all using (auth.uid() = user_id);
-create policy "Users can manage their own venues" on public.user_venues for all using (auth.uid() = user_id);
+Before treating this as production software, the next hardening steps are:
 
--- Custom venue lists
-create table venue_lists (
-  id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users(id) on delete cascade not null,
-  name text not null,
-  venue_ids text[] default '{}',
-  created_at timestamp with time zone default now()
-);
-alter table venue_lists enable row level security;
-create policy "Users can manage their own lists" on venue_lists for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-
--- User profiles
-create table user_profiles (
-  user_id uuid references auth.users(id) on delete cascade primary key,
-  full_name text,
-  email text,
-  wedding_date date,
-  guest_count integer,
-  updated_at timestamp with time zone default now()
-);
-alter table user_profiles enable row level security;
-create policy "Users can manage their own profile" on user_profiles for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
-```
-
-Start the dev server:
-
-```bash
-npm run dev
-```
-
----
+- Verify Resend webhook signatures before processing inbound email
+- Move venue storage from large JSON blobs into relational tables
+- Replace demo PDF fallback with robust PDF text extraction and structured evals
+- Add background jobs for long-running venue search and reply parsing
+- Add tests around criteria parsing, ranking, email generation, and webhook updates
+- Add billing/subscription flow and account sharing for couples
 
 ## Roadmap
 
-- [x] Voice + text + image criteria capture
-- [x] AI venue discovery with smart ranking
-- [x] Automated email sending
-- [x] Inbound email parsing (text + PDF)
-- [x] Full reply history per venue
-- [x] Email threading (replies stay on same thread)
-- [x] Share venue list
-- [x] Google + email authentication
-- [x] Per-user data persistence
-- [x] Per-venue notes and transcript upload
-- [x] Side-by-side venue comparison (2–3 venues, best value highlighted)
-- [x] Custom venue lists (create, name, share, download Excel)
-- [x] Google Places API enrichment (photos, address, rating)
-- [x] Venue detail page with photo gallery and lightbox
-- [x] Settings page (name, reply-to email, wedding date, guest count)
-- [ ] Joint account for couples
-- [ ] Google Calendar integration
-- [ ] Auto call recording via Twilio
-- [ ] Payment/subscription
-
----
+- [x] Voice, text, and image criteria capture
+- [x] AI venue discovery and Google Places enrichment
+- [x] Venue dashboard and detail pages
+- [x] Batch email generation and sending
+- [x] Inbound reply parsing and reply history
+- [x] Custom lists, sharing, and Excel export
+- [x] Side-by-side comparison
+- [x] Per-user auth and persistence
+- [ ] Joint couple accounts
+- [ ] Calendar integration for visits
+- [ ] Background job queue for scraping and parsing
+- [ ] Payment/subscription flow
+- [ ] Production webhook verification and observability
 
 ## Built By
 
-Saurabh Bains — [@saurabhbains](https://github.com/saurabhbains)
+Saurabh Bains - product builder focused on AI workflows for high-context human decisions.
